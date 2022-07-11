@@ -1,0 +1,70 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{ifpdf}
+\usepackage{a4wide}
+\usepackage[utf8]{inputenc}
+
+\title{ERDS Maps}
+\author{Clemens Brunner}
+\date{\today}
+
+\ifpdf
+\pdfinfo {
+    /Author (Clemens Brunner)
+    /Title (ERDS-Maps)
+    /Subject (ERDS-Maps)
+    /Keywords ()
+    /CreationDate (D:20081001104953)
+}
+\fi
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+The ERDS maps toolbox is a collection of programs running in MATLAB or Octave to calculate time-frequency maps in order to visualize the phenomena of event-related desynchronization (ERD) and event-related synchronization (ERS), abbreviated as ERDS maps. The main function to calculate ERDS maps is called \texttt{calcErdsMap.m}. The main function to plot those maps is called \texttt{plotErdsMap.m}.
+
+\section{Function call}
+\subsection{Basic call}
+The function has only four mandatory parameters, namely:
+\begin{itemize}
+	\item \texttt{s} $\left< T \times C \right>$ contains the signals as obtained by \texttt{sload.m} and consists of $T$ rows (the number of samples) and $C$ columns (the number of channels).
+    \item \texttt{h} $\left< 1 \times 1\ \mathrm{struct} \right>$ contains the header information as obtained by \texttt{sload.m}. The complete structure is not required, only three fields must exist. These are the sample rate \texttt{h.SampleRate} $\left< 1 \times 1 \right>$ (must be specified in Hz), the $E$ starting samples of the trials in \texttt{h.TRIG} $\left< E \times 1 \right>$, and the labels \texttt{h.Classlabel} $\left< E \times 1 \right>$ (for each entry in \texttt{h.TRIG} there must be a corresponding label in this variable).
+    \item \texttt{t} $\left< 1 \times 3 \right>$ specifies the start point, time resolution and end point within a trial (in s). If the second element is 0, the full resolution (each sample point) is used. In this case, it is sufficient to provide only those two time points and omit the resolution entry. Note that these time points are always relative to the values provided in \texttt{h.TRIG}.
+    
+    For example, if \texttt{t} is \texttt{[0, 0, 8]}, a trial is defined from 0\,s after each \texttt{h.TRIG} and lasts until 8\,s afterwards. Each sample is used for the calculation. Equivalently, \texttt{[0, 8]} can also be used in this case. If only 10 time points per second (every 0.1\,s) should be considered in the calculation, the parameter would change to \texttt{[0, 0.1, 8]} in this example.
+    \item \texttt{f\_borders} $\left< 1 \times F \right>$ specifies the frequency intervals by $F$ frequency borders. This parameter must contain at least two entries ($F\geq 2$), namely the start and end frequencies. If it contains more than two elements ($F>2$), $F-1$ frequency intervals with different properties defined by the optional parameters \texttt{f\_bandwidths} and \texttt{f\_steps} can be created. Furthermore, note that the frequency values refer to the frequencies in the middle of the corresponding frequency band (e.\,g.~a value of \texttt{5} in \texttt{f\_borders} corresponds to a frequency band of 4--6\,Hz in the default setting of 2\,Hz bandwidth).
+    
+    For example, if the ERDS maps should range from 5--40\,Hz, the parameter \texttt{f\_borders} would be \texttt{[5, 40]}. If three frequency intervals with different properties are to be created, this parameter could be \texttt{[5, 12, 20, 40]} -- the three intervals are then 5--12\,Hz, 12--20\,Hz, and 20--40\,Hz.
+\end{itemize}
+The output is written into a structure. The syntax for a minimal call looks like this:
+
+\texttt{r = calcErdsMap(s, h, t, f\_borders);}
+
+\subsection{Optional parameters}
+All optional parameters have reasonable default values if not specified. To change an optional parameter, two arguments separated by a comma have to be passed to \texttt{calcErdsMap}. The first argument contains the name of the parameter listed below in single quotes, whereas the second parameter specifies the corresponding value. For example, a function call with only one optional parameter could be as follows:
+
+\texttt{r = calcErdsMap(s, h, t, f\_borders, 'class', [1, 2]);}
+
+\begin{itemize}
+\item \texttt{method} $\left< \mathrm{string} \right>$ specifies the method used to calculate the ERDS maps. Possible values are \texttt{bp} (band power), \texttt{fft} (Fast Fourier Transform) and \texttt{wavelet} (wavelet transform). By default, the band power method is used. Note that at the moment, \texttt{fft} and \texttt{wavelet} have not been implemented yet.
+\item \texttt{f\_bandwidths} $\left< 1 \times F-1 \right>$ specifies the bandwidths for the frequency intervals specified in \texttt{f\_borders} (in Hz). Therefore, this vector must contain exactly one element less than \texttt{f\_borders}. The default value for the bandwidths of all frequency intervals is 2\,Hz.
+
+In the example above when \texttt{f\_borders} is \texttt{[5, 12, 20, 40]}, \texttt{f\_bandwidths} could be \texttt{[2, 2, 4]}. This would correspond to 2\,Hz bands in the intervals 5--12\,Hz and 12--20\,Hz and 4\,Hz bands in the interval 20--40\,Hz.
+\item \texttt{f\_steps} $\left< 1 \times F-1 \right>$
+\end{itemize}
+
+\subsection{Output structure}
+
+\section{Detailed description}
+\subsection{Significance tests}
+In order to assess the statistical significance of the resulting ERDS values, several methods are available.
+
+\subsubsection{Bootstrapping}
+This procedure is based on bootstrapping.
+
+\subsubsection{Box-Cox transformation}
+This procedure performs a Box-Cox transformation prior to calculating confidence intervals based on the standard normal distribution. Since the variance is not known (it must be estimated from the data), a more accurate way to calculate the confidence interval is to use the Student's $t$-distribution instead. This will be implemented in a future version.
+
+        	
+\end{document}
+

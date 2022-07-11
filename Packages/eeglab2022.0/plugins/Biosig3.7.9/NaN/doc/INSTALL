@@ -1,0 +1,55 @@
+
+Installing the NaN-tb for Octave and Matlab:
+--------------------------------------------
+a) Extract files and save them in /your/directory/structure/to/NaN/
+
+b) Include the path with one of the following commands: 
+
+        HOME = getenv('HOME');   % if needed, change path to /your/directory/structure/to/
+
+	addpath([HOME,'/NaN/')
+	addpath([HOME,'/NaN/inst')
+	addpath([HOME,'/NaN/src')
+
+   Make sure the functions in the NaN-toolbox are found before the default functions.
+   The NaN-toolbox contains some functions like mean, var, std, cor, cov, and corrcoef 
+   which work equivalently than the orginal function - the only exception is that 
+   missing values (NaN) are skipped. [You can turn off that behavior by 
+   settting flag_implicit_skip_nan(0) ].
+   Alternatively, You can avoid this by including the directories at the end of the path
+   
+	addpath([HOME,'/NaN/','-end')
+	addpath([HOME,'/NaN/inst','-end')
+	addpath([HOME,'/NaN/src','-end')
+
+c) The use of mex-files is recommended for using the full capabilities of the NaN-toolbox.
+   Without the mex-files, SVN- and Liblinear classifiers are not available, and in some cases
+   slower m-functions are used. 
+
+   Setup your mex compiler using GCC, the GNU Compiler Collection (or some derivative like MinGW)
+      >> mex -setup
+   Run MAKE from the directory .../NaN/src/
+
+   Compiling the mex-files is well tested on Linux, but might not work completely on other platforms.
+   Specifically, on Windows you need to setup gnumex and gcc (typically mingw or cygwin).
+   (covm_mex and sumskipnan_mex are strongly recommended for performance reasons,
+   train.mex and svmtrain_mex are needed when using support vector machines) 
+   Precompiled binaries are provided for 32bit Windows with Matlab 7.x (tested with 7.1 and 7.6).
+   Please note, for Matlab 7.2 or earlier, the pre-compiled mex-files need to be renamed to *.dll; 
+   Maybe a *.lnk file with the extension *.dll will also do.  
+
+d) run "naninsttest" from the Octave/Matlab command line prompt 
+      >> naninsttest
+  In case of success, You should see the following message: 
+      >> naninsttest
+      NANINSTTEST successful - your NaN-tools are correctly installed
+
+  This checks whether the installation was successful.
+
+-----------------------
+
+  $Id$
+  Copyright (c) 2000-2003,2005,2006,2009,2010,2011,2014 by Alois Schloegl <alois.schloegl@gmail.com>
+  This is part of the NaN-toolbox
+  http://pub.ist.ac.at/~schloegl/matlab/NaN/
+

@@ -1,0 +1,38 @@
+syntax: regexp
+# The recurrent (^|/) idiom in the regexps below should be understood
+# to mean "at any directory" while the ^ idiom means "from the
+# project's top-level directory".
+
+(^|/).*\.dvi$
+(^|/).*\.pdf$
+(^|/).*\.o$
+(^|/).*\.oct$
+(^|/).*\.octlink$
+(^|/)octave-core$
+(^|/)octave-workspace$
+(^|/).*\.tar\.gz$
+
+## Our Makefile target
+^target/
+
+## Files generated automatically by autoconf and the configure script
+^src/aclocal\.m4$
+^src/configure$
+^src/autom4te\.cache($|/)
+^src/config\.log$
+^src/config\.status$
+#^src/Makefile$
+^src/.*\.m$
+
+# e.g. doc/faq/OctaveFAQ.info
+#      doc/interpreter/octave.info-4
+^doc/.*\.info(-\d)?$
+^doc/\w*/stamp-vti$
+^doc/\w*/version\.texi$
+
+# Emacs tools create these
+(^|/)TAGS$
+(^|/)semantic.cache$
+
+# Other text editors often create these
+(^|/)~.*

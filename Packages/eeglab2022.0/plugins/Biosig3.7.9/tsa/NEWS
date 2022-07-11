@@ -1,0 +1,53 @@
+
+2019-10-24: Release of TSA 4.6.2
+- all source files are now utf-8 encoded
+
+
+2019-01-03: Release of TSA 4.5
+
+- the following functions have been moved into the 
+  NaN-toolbox:
+  detrend, histo, histo2, histo3, histo4 
+
+- detrend: the 2nd output (trend) can be interpolated and
+    should not contain any NaN.
+
+
+2019-01-03: Release of TSA 4.4.5
+
+- make TSA-package dependent of NaN-package
+- avoid compiling the same core functions from the NaN-toolbox
+
+
+2016-11-30: Release of TSA 4.4.4
+
+- fixes bug #49468 - NaN-toolbox is not required anymore 
+  when using Octave's pkg installer
+
+
+2016-02-26: Release of TSA 4.4.1
+
+- fixes version number 
+  two digit version number like 4.4 does not work in Octave-forge
+
+
+2016-02-25: Release of TSA 4.3.4
+
+- include histo_mex (fixes bug 	http://savannah.gnu.org/bugs/?45977)
+
+
+2015-06-01: Release of TSA 4.3.2
+
+- ready for gcc/g++ v5
+- support Debian's hardening flags
+- fix version check (bug #44989)
+- fix documentation [bugs #44673]
+- fix installation on OpenSuse
+
+2015-01-24: Release of TSA 4.2.9
+
+- support for MacOSX added                
+  (tested on Homebrew Octave)
+
+2015-01-18
+	maintenance release: fixes minor bugs and configuration issues
