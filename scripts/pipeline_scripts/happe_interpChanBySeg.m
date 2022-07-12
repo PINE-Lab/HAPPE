@@ -45,6 +45,7 @@
 function [EEG, dataQC] = happe_interpChanBySeg(EEG, dataQC, currFile)
 fprintf('Interpolating bad data...\n') ;
 eegChans = [1:size(EEG.chanlocs,2)] ;
+chanNames = {EEG.chanlocs.labels} ;
 rejOps.measure = [1 1 1 1] ;
 rejOps.z = [3 3 3 3] ;
 if length(size(EEG.data)) > 2
@@ -53,7 +54,8 @@ if length(size(EEG.data)) > 2
     for v=1:size(EEG.data, 3)
         listProps = single_epoch_channel_properties(EEG, v, eegChans);
         lengthsEp{v} = eegChans(logical(min_z(listProps, rejOps)));
-        status = [status sprintf('[%d:',v) sprintf(' %d', lengthsEp{v}) ']'] ;
+        badChanNames = chanNames(lengthsEp{v}) ;
+        status = [status sprintf('[%d:',v) sprintf(' %s', badChanNames{:}) ']'] ;
     end
     EEG = h_epoch_interp_spl(EEG, lengthsEp, []) ;
     EEG.saved = 'no' ;
