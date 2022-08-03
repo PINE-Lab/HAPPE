@@ -39,6 +39,13 @@ if EEG.trials == 1
     fprintf('Segmenting...\n') ;
     % TASK/ERP - SEGMENT USING TAGS
     if params.paradigm.task
+        % Check to ensure all event types are char vectors
+        for indx=1:size(EEG.event,2)
+            if ~ischar(EEG.event(indx).type)
+                EEG.event(indx).type = num2str(EEG.event(indx).type) ;
+            end
+        end
+
         % For ERPs, adjust the event latencies by the user-specified
         % offset.
         if params.paradigm.ERP.on

@@ -1,0 +1,8 @@
+%
+% 
+% 
+subdirs={'doc', 't200_FileAccess', 't210_Events', 't250_ArtifactPreProcessingQualityControl', 't300_FeatureExtraction', 't330_StimFit', 't340_MachineLearningOptimalDetection', 't400_Classification', 't450_MultipleTestStatistic', 't490_EvaluationCriteria', 't500_Visualization', 't501_VisualizeCoupling'};
+
+rmpath (fullfile (fileparts (mfilename ('fullpath')), subdirs){:});
+
+

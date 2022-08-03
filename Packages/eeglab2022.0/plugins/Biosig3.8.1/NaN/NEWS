@@ -1,0 +1,251 @@
+
+2021-11-03: Release of NaN-toolbox 3.6.1
+
+* signrank: update computation of p-value
+    according to revised references,
+    and validated against R.
+* cdfplot: use histo instead of histo_mex
+
+
+2021-07-26: Release of NaN-toolbox 3.6.0
+
+* corrplot, knnsearch <NEW>
+
+
+2021-02-15: Release of NaN-toolbox 3.5.3
+
+* kappa: Youden index (YI), and SSE as return value
+* roc: add maxYI as output value
+* naninsttest: check ttest for NaN handling
+
+
+2020-10-31: Release of NaN-toolbox 3.5.2
+
+* new functions added
+   gini: Gini index
+   lmom: L-moments
+   betapdf, betacdf, betainv:
+	beta distribution functions
+
+* bug fixes:
+  bland-altman: fix ylabel
+  fix debian bug #964210: test tries to download data
+  fix #59335: "'load_fisheriris' fails on Windows"
+  fix #59336: "(nan) BIST for `ttest` fails"
+    this failed because betainv(...) is not available
+    the suggestion of add a dependency on statistics package
+    does not work, because of a conflict with statistics
+    (it would not handle NaNs in the indended way).
+    Therefore, functions for beta* distributions are included.
+
+
+2020-07-12: Release of NaN-toolbox 3.5.0
+
+* ttest:
+  - support output arguments CI and STATS
+
+* fishers_exact_test:
+  - use VPA from symbolic pkg if available; 
+  - add unit tests; 
+  - improve help   
+
+
+2019-11-16:  Release of NaN-Tb v3.4.5
+
+- fishers_exact_test: added <NEW> 
+
+- bug fixes for:
+  #57263: [octave forge] (nan) fails to build on a system without libblas (Octave built with OpenBLAS)
+  #57232: [octave forge] (nan) Spelling error in message of function str2array
+  #50248: [octave forge] (nan) Spelling error in the help string of the train function
+  #57228 "[octave forge] (nan) fails to build with undefined references in Octave 5 when LDFLAGS is set"
+- gscatter: fix use of argument "doleg"
+- address "warning: no return statement in function returning non-void"
+
+2019-10-27:  Release of NaN-Tb v3.4.3
+
+- Makefile.*
+    Add missing copyright/licenses
+
+- liblinear, libsvm:
+    add license from original author
+
+- roc.m: number of data points limited to about 5000
+    add final data point at (1,1).
+
+
+2019-09-23:  Release of NaN-Tb v3.4
+
+- quadratic classifiers:
+  check for positive-definiteness of covariance matrix
+  and return no classification (encoded as NaN), if not.
+
+- mad, meandev:
+  make sure source is ascii/utf-8 compliant
+
+
+2019-06-08:  Release of NaN-Tb v3.3
+
+- detrend: the 2nd output (trend) can be interpolated and should 
+  not contain NaNs.
+
+- train_sc: some supported classifiers should not be used 
+     with the short-cut for two-class problems. 
+
+- xval: report also results w/o crossvaliation
+
+- ecdf: fix ylim in case data contains missing values.
+
+
+2019-04-15:  Release of NaN-Tb v3.2.3
+
+- <NEW> ROC is included. ROC is derived
+  from the implementation in "biosig for octave and matlab"
+  	biosig-code/biosig4matlab/t490_EvaluationCriteria/
+  https://sourceforge.net/p/biosig/code/ci/master/tree/biosig4matlab/t490_EvaluationCriteria/
+
+- <NEW> load_cifar100 load_cifar10 load_mnist:
+  loading of various machine-learning databases
+
+- <NEW> kolmogorov_smirnov:
+   Multiple two-sample Kolmogorov-Smirnov test
+
+- <NEW> kstest2:
+   wrapper for kolmogorov_smirnov
+
+- requires Octave 3.8 or later
+
+- histo2, histo3: 
+  bug fix for case when whole column contains NaNs
+
+- <NEW> inst/signrank.m: add Wilcoxon signred rank test 
+  Unlike Octave's wilcoxon_test, this works also for 
+  sample sizes smaller than N=25
+
+- corrcoef: improve documentation on one- 
+  and two- pass algorithm
+
+- histogram functions (histo.m) included
+
+- upgrade to liblinear 2.2.1
+  weightening of samples not supported anymore
+
+- upgrade to libsvm 3.2.3
+  weightening of samples not supported anymore
+
+- minor changes
+
+
+2017-08-23: Release of NaN-Tb v3.1.4
+
+- minor fixes:
+	license text, file permissions, 
+	remove dependency on -lcholmod
+
+
+2017-08-14: Release of NaN-Tb v3.1.3
+
+- fix bug #43931: bug in help of corrcoef.m
+	reported by: locker@vp...
+- fix bug #47673: build failure for ppc64 architecture
+	reported by: Michel Normand
+- bug #48771 "Link against the shared library libsvm"
+    had been fixed previously in Nov 2017
+
+- tiedrank: increase matlab compatibility by allowing
+    third input argument
+
+
+2017-01-10: Release of NaN-tb v3.1.2
+
+- fix build when Octave does not support openmp
+
+2017-01-03: Release of NaN-tb v3.1.1
+
+- add Makefile to built release
+
+2016-11-30: Release of NaN-tb v3.1.0
+
+- fix bug 48426: built for Octave 4.2.0
+- prepare for using external libsvm and liblinear
+- fix typos, address compiler warnings and improve docu
+
+2016-08-10: Release of NaN-tb v3.0.3
+- tcdf: fix bug #48731 (thanks to Nir Krakauer)
+- coercoef: add comment on Matlab compatibiliy in help
+- test_fss, load_fisheriris: 
+          fix support on mingw platform (Windows)
+
+2016-07-30: Release of NaN-tb v3.0.2
+- Octave/Windows: setenv CC=gcc (fixes bug 47559)
+- no OpenMP for Octave/Windows and MacOSX
+
+
+2015-02-26: Release of NaN-tb v3.0.1
+
+- fixes version number 
+  two digit version number like 3.0 cannot be used in Octave-forge
+
+2015-09-12: Release of NaN-tb v2.8.3
+
+- ready for gcc/g++ v5 
+- honor environment variables CC and CXX
+- fix installer issue on OpenSuse
+- support debian hardening flags
+- internal improvents (in type and macro usage)
+- address a number of compiler warnings
+- bug fixes 
+
+2015-07-06: Release of NaN-tb v2.8.1
+
+- fix nantest to avoid crashing octave 4.0.0 on windows
+
+2015-06-24: Release of NaN-tb v2.8.0
+
+- fix Makefile for Octave4 on windows
+  (fixes #45363 and #44859)
+
+- check for sparse input matrices and
+  convert to full when needed
+
+2015-06-01: Release of NaN v.2.7.6
+
+- improve accuracy of normcdf (bug #38170) 
+
+2015-04-23: Release of NaN v2.7.5
+
+- fix compiler issue with __isnan
+- do not display diagnostic messages
+
+2015-04-12
+
+- upgrade to libsvm-3.12
+- fix multi-threaded build (make -j) 
+- improve some tests
+
+
+2015-03-31: Release of NaN 2.7.2
+
+- bug fix in nanstd.m 
+- cross-compiler issues in histo_mex
+- fix Makefile for use with Matlab
+- address compatibility issue on debian/jessie
+- minor issues (some compiler warnings are addressed)
+
+
+2015-01-24: Release of NaN 2.7.1
+
+- support for MacOSX added
+  (tested on Homebrew Octave)
+
+
+2015-01-17: Release of NaN 2.7.0
+
+Fix compatibility issues with core functions in Matlab and Octave
+- zscore: order of input output argument
+- mahal gives now same result than matlab
+- sumskipnan allows DIM argument larger than ndims
+- a few minor issues
+
+For changes of previous releases see: 
+  http://pub.ist.ac.at/~schloegl/matlab/NaN/CHANGELOG

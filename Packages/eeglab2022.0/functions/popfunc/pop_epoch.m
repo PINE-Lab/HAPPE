@@ -200,7 +200,7 @@ end
 % create structure
 % ----------------
 if ~isempty(args)
-   try, g = struct(args{:});
+   try g = struct(args{:});
    catch, disp('pop_epoch(): wrong syntax in function arguments'); return; end
 else
     g = [];

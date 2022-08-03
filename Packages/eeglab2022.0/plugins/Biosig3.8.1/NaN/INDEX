@@ -1,0 +1,20 @@
+nan >> A statistics and machine learning toolbox
+A statistics and machine learning toolbox for data with and w/o missing values
+ coefficient_of_variation geomean meansq skewness
+ covm cor cov corrcoef harmmean median statistic
+ detrend kurtosis moment std mad naninsttest nantest
+ nansum nanstd nanconv nanfft nanfilter 
+ nanfilter1uc normpdf normcdf norminv meandev 
+ percentile quantile rankcorr ranks rms sumskipnan
+ var mean sem spearman trimean tpdf tcdf tinv zscore
+ flag_implicit_significance xcovf train_sc test_sc
+ xval classify train_lda_sparse decovm gscatter mahal
+ cdfplot hist2res fss cat2bin ttest ttest2 xptopen 
+ bland_altman cumsumskipnan range signrank histo
+ histo2 histo3 histo4 kolmogorov_smirnov kstest2 roc
+ kappa load_cifar100 load_cifar10 load_mnist
+ fishers_exact_test betapdf betacdf betainv
+ gini lmom corrplot knnsearch
+
+
+
