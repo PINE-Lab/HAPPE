@@ -32,15 +32,15 @@
 % You should have received a copy of the GNU General Public License along
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
-function peakVals = calcPeaks(windows, subGlobal)
-peakVals = cell(1,2*size(windows,2)+4) ;
+function peakVals = calcPeaks(setWindows, subWindows, subGlobal)
+peakVals = cell(1,2*size(setWindows,2)+4) ;
 
 % Find Peak (Max or Min) in Windows
-for i=1:size(windows, 2)
-    currWin = windows{i} ;
-    if strcmpi(windows{i, 3}, "max")
+for i=1:size(setWindows, 2)
+    currWin = subWindows{i} ;
+    if strcmpi(setWindows{i, 3}, "max")
         [~, currPeakIndx] = max(currWin(:,2)) ;
-    elseif strcmpi(windows{i,3}, "min")
+    elseif strcmpi(setWindows{i,3}, "min")
         [~, currPeakIndx] = min(currWin(:,2)) ;
     end
     peakVals{1, i*2-1} = currWin(currPeakIndx,2) ;

@@ -147,7 +147,7 @@ for currfile=1:size(FileNames, 2)+1
     
             % SET CHANNELS OF INTEREST
             if strcmpi(params.chans.subset, 'coi_exclude')
-                subChanIDs = setdiff(currsub.colheaders, params.chans.IDs) ;
+                subChanIDs = setdiff(currsub.colheaders, [params.chans.IDs, 'Time']) ;
                 if ~params.badChans.inc
                     subChanIDs = setdiff(subChanIDs, subBadChans) ; 
                 end
