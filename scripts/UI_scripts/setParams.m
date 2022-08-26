@@ -275,8 +275,8 @@ while true
 
     %% BAD CHANNEL DETECTION
     if (~preExist || strcmpi(paramChoice, 'bad channel detection')) && ~reprocessing
-        if ~params.loadInfo.chanlocs.inc; params.badChans.rej = 0;
-        else
+%         if ~params.loadInfo.chanlocs.inc; params.badChans.rej = 0;
+%         else
             fprintf('Perform bad channel detection? [Y/N]\n') ;
             params.badChans.rej = choose2('n','y') ;
             if params.badChans.rej && ~params.lowDensity
@@ -286,7 +286,7 @@ while true
                 params.badChans.legacy = choose2('default', 'legacy') ;
             else; params.badChans.legacy = 0 ;
             end
-        end
+%         end
     end 
 
     %% WAVELET METHODOLOGY

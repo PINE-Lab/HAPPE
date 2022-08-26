@@ -78,7 +78,7 @@ else
     elseif EEG.srate > 250 && EEG.srate <= 500; wavLvl = 9;
     elseif EEG.srate <=250; wavLvl = 8;
     end
-    
+
     % Set the threshold rule depending on user input (when applicable) and
     % paradigm.
     if params.paradigm.ERP.on && params.wavelet.softThresh

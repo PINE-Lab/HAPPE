@@ -79,22 +79,7 @@ if loadInfo.inputFormat == 1
         List = {[1,64], [2,32], [2,64], [2,128], [2,256]} ;
         % Collect channel location information (described above):
         if ~any(cellfun(@(m)isequal(m,loadInfo.layout),List(1,:)))
-            fprintf(['Do you have a channel locations file for your ' ...
-                'data? [Y/N]\nNOTE: A list of supported file types can be ' ...
-                'found in the HAPPE User Guide.\n']) ;
-            loadInfo.chanlocs.inc = choose2('n', 'y') ;
-            if loadInfo.chanlocs.inc
-                loadInfo.chanlocs.file = input(['Enter the name of the ' ...
-                    'channel locations file, including the full path and ' ...
-                    'file extension.\n> '], 's') ;
-            else
-                fprintf(['HAPPE functionality is limited without channel ' ...
-                    'locations. Continue anyway? [Y/N]\n'])
-                if choose2('n','y'); loadInfo.chanlocs.file = [] ;
-                else; error(['User Termination: No channel locations for .mat ' ...
-                        'file.']) ;
-                end
-            end
+            [loadInfo.chanlocs.inc, loadInfo.chanlocs.file] = determ_chanLocs() ;
         else
             loadInfo.chanlocs.file = [happeDir filesep ...
                 'acquisition_layout_information' filesep] ;
@@ -178,6 +163,8 @@ elseif loadInfo.inputFormat == 5
             loadInfo.typeFields = UI_cellArray(2, {'code'}) ;
         end
     end
+elseif loadInfo.inputFormat == 6
+    [loadInfo.chanlocs.inc, loadInfo.chanlocs.file] = determ_chanLocs() ;
 end
 end
 
@@ -190,11 +177,11 @@ end
 function inputFormat = setFormat()
     fprintf(['File format:\n  1 = .mat (MATLAB file)\n  2 = .raw' ...
         ' (Net Station simple binary)\n  3 = .set (EEGLAB format)\n' ...
-        '  4 = .cdt (Neuroscan)\n  5 = .mff (EGI)\n']) ;
+        '  4 = .cdt (Neuroscan)\n  5 = .mff (EGI)\n  6 = .edf\n']) ;
     while true
         inputFormat = input('> ') ;
-        if ismember(inputFormat, [1:5]); break ;
-        else; disp("Invalid input: please enter 1, 2, 3, 4, or 5.") ;
+        if ismember(inputFormat, 1:6); break ;
+        else; disp("Invalid input: please enter 1, 2, 3, 4, 5, or 6.") ;
         end
     end
 end
@@ -246,7 +233,7 @@ while true
     
     if inputFormat == 2 && ((layout(1) == 1 && layout(2) ~= 64) || ...
             (layout(1) == 2 && ~ismember(layout(2), [32,64,128,256])))
-        fprintf(['Invalid input: please enter a supported number of channels.\n']) ;
+        fprintf('Invalid input: please enter a supported number of channels.\n') ;
     else; break;
     end  
 end
@@ -262,6 +249,25 @@ function eventLoc = formatTask()
         if exist(eventLoc, 'dir') == 7; break ;
         else; fprintf(['Invalid input: please enter the correct path to ' ...
                 'your task event info.\n']) ; 
+        end
+    end
+end
+
+function [inc, chanlocsFile] = determ_chanLocs()
+    fprintf(['Do you have a channel locations file for your ' ...
+        'data? [Y/N]\nNOTE: A list of supported file types can be ' ...
+        'found in the HAPPE User Guide.\n']) ;
+    inc = choose2('n', 'y') ;
+    if inc
+        chanlocsFile = input(['Enter the name of the ' ...
+            'channel locations file, including the full path and ' ...
+            'file extension.\n> '], 's') ;
+    else
+        fprintf(['HAPPE functionality is limited without channel ' ...
+            'locations. Continue anyway? [Y/N]\n'])
+        if choose2('n','y'); chanlocsFile = [] ;
+        else; error(['User Termination: No channel locations for .mat ' ...
+                'file.']) ;
         end
     end
 end
