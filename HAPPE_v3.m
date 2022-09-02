@@ -132,7 +132,7 @@ cd (srcDir) ;
 [reprocess, ranMuscIL, rerunExt] = isReprocessed() ;
 
 %% DETERMINE IF USING PRESET PARAMETERS
-ver = '2_3_1' ;
+ver = '3_1_0' ;
 [preExist, params, changeParams] = isPreExist(reprocess, ver) ;
 
 %% SET PARAMETERS
