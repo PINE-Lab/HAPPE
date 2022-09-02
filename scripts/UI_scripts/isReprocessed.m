@@ -33,7 +33,7 @@
 % You should have received a copy of the GNU General Public License along
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
-function [reprocessing, rerunExt] = isReprocessed()
+function [reprocessing, ranMuscIL, rerunExt] = isReprocessed()
 % ASK WHETHER DATA IS RAW OR ALREADY PROCESSED VIA COMMAND LINE INPUT
 fprintf(['Select an option:\n  raw = Run on raw data from the start\n' ...
     '  reprocess = Run on HAPPE-processed data starting post-artifact ' ...
@@ -42,6 +42,12 @@ reprocessing = choose2('raw', 'reprocess') ;
 
 % IF REPROCESSING...
 if reprocessing
+    % ASK TO RUN POST-WAV OR POST-MUSCIL
+    fprintf(['Run from wavelet-cleaned data or muscIL-cleaned data?\n  ' ...
+        'wavclean = Run starts after wavelet-cleaning\n  muscIL = Run ' ...
+        'starts after muscIL (only available if muscIL-cleaned data exists)\n']) ;
+    ranMuscIL = choose2('wavclean', 'muscIL') ;
+
     % ASK TO EITHER OVERWRITE FILES OR SAVE NEW ONES.
     fprintf(['Files, such as processed data and quality metrics may already' ...
         ' exist for this dataset.\n  overwrite = Overwrite existing files\n' ...
@@ -61,6 +67,6 @@ if reprocessing
     end
     
 % IF RUNNING FROM THE START, set the rerun tag to empty.
-else; rerunExt = '' ;
+else; rerunExt = '' ; ranMuscIL = 0;
 end
 end

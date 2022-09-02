@@ -235,7 +235,7 @@ while true
                         'stable') ;
                     break ;
                 else
-                    params.lineNoise.harms.freqs(indx) = str2num(user_input) ;
+                    params.lineNoise.harms.freqs(indx) = str2double(user_input) ;
                     indx = indx + 1 ;
                 end
             end
@@ -295,11 +295,15 @@ while true
             'method optimized in HAPPE v2.\n  legacy = Method from HAPPE' ...
             ' v1 (NOT RECOMMENDED).\n']) ;
         params.wavelet.legacy = choose2('default', 'legacy') ;
-        if ~params.wavelet.legacy && params.paradigm.ERP.on
-            fprintf(['Threshold rule for wavelet thresholding:\n  soft - ' ...
-                'Use a soft threshold\n' ...
-                '  hard - Use a hard threshold\n']) ;
-            params.wavelet.softThresh = choose2('hard', 'soft') ;
+        if ~params.wavelet.legacy
+            fprintf('Performing functional connectivity analyses? [Y/N]\n') ;
+            params.wavelet.fc = choose2('n', 'y') ;
+            if params.paradigm.ERP.on
+                fprintf(['Threshold rule for wavelet thresholding:\n  soft - ' ...
+                    'Use a soft threshold\n' ...
+                    '  hard - Use a hard threshold\n']) ;
+                params.wavelet.softThresh = choose2('hard', 'soft') ;
+            end
         end
     end
     
@@ -394,10 +398,15 @@ while true
                 ' of interest\n']) ;
             params.segRej.ROI.on = choose2('all', 'roi') ;
             if params.segRej.ROI.on
-                fprintf(['Enter the channels in the ROI, one at a time.\n' ...
-                    'When you have finished entering all channels, enter ' ...
+                fprintf(['Choose an option for entering channels:\n  include = ' ...
+                    'Include ONLY the entered channel names\n  exclude = Include ' ...
+                    'every channel EXCEPT the entered channel names\n']) ;
+                params.segRej.ROI.include = choose2('exclude', 'include') ;
+                fprintf(['Enter channels, including the preceding letter, one at ' ...
+                    'a time.\nPress enter/return between each entry.\nExamples: ' ...
+                    'E17\n          M1\nWhen you have entered all channels, input ' ...
                     '"done" (without quotations).\n']) ;
-                params.segRej.ROI.chans = UI_cellArray(1,{}) ;
+                params.segRej.ROI.chans = unique(UI_cellArray(1, {}), 'stable') ;
             end
             if params.paradigm.task && params.loadInfo.inputFormat == 1
                 fprintf(['Use pre-selected "usable" trials to restrict ' ...
@@ -565,7 +574,7 @@ while true
                     params.vis.toPlot = unique(params.vis.toPlot, 'stable') ;
                     break ;
                 else
-                    params.vis.toPlot(indx) = str2num(user_input) ;
+                    params.vis.toPlot(indx) = str2double(user_input) ;
                     indx = indx + 1 ;
                 end
             end
@@ -589,7 +598,7 @@ while true
                         params.vis.toPlot = unique(params.vis.toPlot, 'stable') ;
                         break ;
                     else
-                        params.vis.toPlot(indx) = str2num(user_input) ;
+                        params.vis.toPlot(indx) = str2double(user_input) ;
                         indx = indx + 1 ;
                     end
                 end
@@ -599,9 +608,9 @@ while true
     
    %% DONE
    if ~preExist || strcmpi(paramChoice, 'done')
-       fprintf(['Please check your parameters before continuing.\n']) ;
+       fprintf('Please check your parameters before continuing.\n') ;
        listParams(params) ;
-       fprintf(['Are the above parameters correct? [Y/N]\n']) ;
+       fprintf('Are the above parameters correct? [Y/N]\n') ;
        if choose2('n','y'); break ;
        elseif ~preExist
            changedParams = 1 ;

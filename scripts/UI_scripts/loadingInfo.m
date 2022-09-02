@@ -165,6 +165,8 @@ elseif loadInfo.inputFormat == 5
     end
 elseif loadInfo.inputFormat == 6
     [loadInfo.chanlocs.inc, loadInfo.chanlocs.file] = determ_chanLocs() ;
+elseif loadInfo.inputFormat == 7
+    % Will probably need to load the chanlocs ***
 end
 end
 
@@ -177,11 +179,12 @@ end
 function inputFormat = setFormat()
     fprintf(['File format:\n  1 = .mat (MATLAB file)\n  2 = .raw' ...
         ' (Net Station simple binary)\n  3 = .set (EEGLAB format)\n' ...
-        '  4 = .cdt (Neuroscan)\n  5 = .mff (EGI)\n  6 = .edf\n']) ;
+        '  4 = .cdt (Neuroscan)\n  5 = .mff (EGI)\n  6 = .edf\n' ...
+        '  7 = .bdf->.set (Mentalab)\n']) ;
     while true
         inputFormat = input('> ') ;
-        if ismember(inputFormat, 1:6); break ;
-        else; disp("Invalid input: please enter 1, 2, 3, 4, 5, or 6.") ;
+        if ismember(inputFormat, 1:7); break ;
+        else; disp("Invalid input: please enter an integer between 1 and 7.") ;
         end
     end
 end
@@ -194,11 +197,11 @@ function [layout, correctEGI] = setLayout(inputFormat)
 layout = [0,0] ;
 fprintf(['Acquisition layout type:\n  1 = EGI Geodesic Sensor ' ...
     'Net\n  2 = EGI HydroCel Geodesic Sensor Net\n  3 = Neuroscan Quik-Cap' ...
-    '\n  4 = Other\n']) ;
+    '\n  4 = Mentalab Explore\n  5 = Other\n']) ;
 while true
     layout(1) = input('> ') ;
-    if ismember(layout(1), [1:4]); break;
-    else; fprintf(['Invalid input: please enter 1, 2, 3, or 4.\n']) ;
+    if ismember(layout(1), [1:5]); break;
+    else; fprintf('Invalid input: please enter an integer between 1 and 5.\n') ;
     end
 end
 

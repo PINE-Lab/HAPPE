@@ -27,7 +27,7 @@
 %                       University, 2022
 %
 % This file is part of HAPPE.
-% Copyright 2018, 2021 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
+% Copyright 2018-2022 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
 %
 % HAPPE is free software: you can redistribute it and/or modify it under
 % the terms of the GNU General Public License as published by the Free

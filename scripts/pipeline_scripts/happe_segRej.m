@@ -41,10 +41,17 @@ fprintf('Rejecting segments...\n') ;
 % GATHER ROI INDXS: If rejecting based on a ROI, collect the indxs for the
 % channels in the ROI.
 if params.segRej.ROI.on
+    if params.segRej.ROI.include
+        params.segRej.ROI.chans = intersect({EEG.chanlocs.labels}, ...
+            params.segRej.ROI.chans) ;
+    else
+        params.segRej.ROI.chans = setdiff({EEG.chanlocs.labels}, ...
+            params.segRej.ROI.chans) ;
+    end
     ROI_indxs = [] ;
     for i=1:size(params.segRej.ROI.chans, 2)
         ROI_indxs = [ROI_indxs find(strcmpi({EEG.chanlocs.labels}, ...
-            params.segRej.ROI.chans{i}))] ;
+            params.segRej.ROI.chans{i}))] ;                                 %#ok<*AGROW> 
     end
 end
 
@@ -54,7 +61,7 @@ if ismember(params.segRej.method, {'amplitude', 'both'})
     if params.segRej.ROI.on; EEG = pop_eegthresh(EEG, 1, ROI_indxs, ...
             [params.segRej.minAmp], [params.segRej.maxAmp], [EEG.xmin], ...
             [EEG.xmax], 2, 0) ;
-    else; EEG = pop_eegthresh(EEG, 1, [1:EEG.nbchan], ...
+    else; EEG = pop_eegthresh(EEG, 1, 1:EEG.nbchan, ...
             [params.segRej.minAmp], [params.segRej.maxAmp], [EEG.xmin], ...
             [EEG.xmax], 2, 0) ;
     end
@@ -81,7 +88,7 @@ if ismember(params.segRej.method, {'similarity', 'both'})
             ROI_indxs, num, num, params.vis.enabled, 0, ...
             params.vis.enabled, [], params.vis.enabled) ;
     else
-        EEGtemp = pop_jointprob(EEGtemp, 1, [1:EEGtemp.nbchan], num, ...
+        EEGtemp = pop_jointprob(EEGtemp, 1, 1:EEGtemp.nbchan, num, ...
             num, params.vis.enabled, 0, params.vis.enabled, [], ...
             params.vis.enabled) ;
     end
@@ -112,7 +119,7 @@ EEG = eeg_rejsuperpose(EEG, 1, 0, 1, 1, 1, 1, 1, 1) ;
 % marked segments from the data.
 if (isfield(EEG, 'reject') && all(EEG.reject.rejglobal)) || ...
         (isfield(EEG, 'rej') && all(EEG.rej.rejglobal))
-    fprintf(['All trials rejected. No further processing possible.\n']) ;
+    fprintf('All trials rejected. No further processing possible.\n') ;
     error('HAPPE:AllTrialsRej', 'All trials rejected') ;
 else; EEG = pop_rejepoch(EEG, [EEG.reject.rejglobal], 0) ;
 end

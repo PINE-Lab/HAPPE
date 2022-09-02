@@ -5,12 +5,12 @@
 %
 % For a detailed description of this script and user options, please see 
 % the following manuscript(s):
-%   Monachino, et al., (----)
+%   Monachino, et al., (2022)
 %
 % Author: A.D. Monachino, PINE Lab at Northeastern University, 2022
 %
 % This file is part of HAPPE.
-% Copyright 2018, 2021 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
+% Copyright 2018-2022 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
 %
 % HAPPE is free software: you can redistribute it and/or modify it under
 % the terms of the GNU General Public License as published by the Free
@@ -49,8 +49,7 @@ cd(srcDir) ;
 %% CREATE OUTPUT FOLDERS
 % Create the folders in which to store outputs
 fprintf('Creating output folders...\n') ;
-if ~isfolder([srcDir filesep 'generateERPs'])
-    mkdir([srcDir filesep 'generateERPs']) ;
+if ~isfolder([srcDir filesep 'generateERPs']); mkdir([srcDir filesep 'generateERPs']) ;
 end
 addpath('generateERPs') ;
 cd([srcDir filesep 'generateERPs']) ;

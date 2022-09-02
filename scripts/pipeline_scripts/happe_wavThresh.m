@@ -79,6 +79,11 @@ else
     elseif EEG.srate <=250; wavLvl = 8;
     end
 
+    % Set the wavelet family depending on user input
+    if params.wavelet.fc; wavFam = 'bior5.5' ;
+    else; wavFam = 'coif4' ;
+    end
+
     % Set the threshold rule depending on user input (when applicable) and
     % paradigm.
     if params.paradigm.ERP.on && params.wavelet.softThresh
@@ -88,7 +93,7 @@ else
     
     % Use wavelet thresholding to determine artifacts in the data.
     artifacts = wdenoise(reshape(EEG.data, size(EEG.data, 1), [])', wavLvl, ...
-        'Wavelet', 'coif4', 'DenoisingMethod', 'Bayes', 'ThresholdRule', ...
+        'Wavelet', wavFam, 'DenoisingMethod', 'Bayes', 'ThresholdRule', ...
         ThresholdRule, 'NoiseEstimate', 'LevelDependent')' ;
 end
 

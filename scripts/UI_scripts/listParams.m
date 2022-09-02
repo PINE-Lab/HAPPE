@@ -52,7 +52,7 @@ if params.paradigm.task
     fprintf('    - Conditions: ') ;
     if params.paradigm.conds.on
         for i=1:size(params.paradigm.conds.groups,1)
-            currGroup = {params.paradigm.conds.groups{i,2:end}} ;
+            currGroup = params.paradigm.conds.groups(i,2:end) ;
             currGroup = currGroup(~cellfun('isempty',currGroup)) ;
             fprintf([params.paradigm.conds.groups{i,1} ' = ' ...
                 sprintf('%s, ', currGroup{1:end-1}) currGroup{end} '\n']);
@@ -102,10 +102,15 @@ elseif params.loadInfo.inputFormat == 2; fprintf('.raw (Netstation simple binary
 elseif params.loadInfo.inputFormat == 3; fprintf('.set (EEGLab)\n') ;
 elseif params.loadInfo.inputFormat == 4; fprintf('.cdt (Neuroscan)\n') ;
 elseif params.loadInfo.inputFormat == 5
-    fprintf('.mff (EGI)\n') ;
-    fprintf(' - Type Fields: ') ;
-    fprintf([sprintf('%s, ', params.loadInfo.typeFields{1:end-1}), ...
-        params.loadInfo.typeFields{end} '\n']) ;
+    fprintf('.mff (EGI)\n - Type Fields: ') ;
+    if length(params.loadInfo.typeFields) > 1
+        fprintf([sprintf('%s, ', params.loadInfo.typeFields{1:end-1}), ...
+            params.loadInfo.typeFields{end} '\n']) ;
+    else; fprintf([params.loadInfo.typeFields{1} '\n']) ;
+    end
+elseif params.loadInfo.inputFormat == 6; fprintf('.edf\n') ;
+elseif params.loadInfo.inputFormat == 7
+    fprintf('.bdf->.set (Mentalab)\n') ;
 end
 
 %% Aquisition Layout
@@ -114,15 +119,11 @@ if params.loadInfo.layout(1) == 1; fprintf(['%i channel EGI Geodesic Sensor ' ..
         'Net\n'], params.loadInfo.layout(2)) ;
 elseif params.loadInfo.layout(1) == 2; fprintf(['%i channel EGI HydroCel ' ...
         'Geodesic Sensor Net\n'], params.loadInfo.layout(2)) ;
-elseif params.loadInfo.layout(1) == 3; fprintf('%i channel BioSemi Net\n', ...
+elseif params.loadInfo.layout(1) == 3; fprintf('%i channel Neuroscan Quik-Cap\n', ...
         params.loadInfo.layout(2)) ;
-elseif params.loadInfo.layout(1) == 4; fprintf(['%i channel Brain Products ' ...
-        'Standard BrainCap Net\n'], params.loadInfo.layout(2)) ;
-elseif params.loadInfo.layout(1) == 5; fprintf(['%i channel Brain Products ' ...
-        'Wet Sponge R-Net for actiCHamp Plus\n'], params.loadInfo.layout(2)) ;
-elseif params.loadInfo.layout(1) == 5; fprintf(['%i channel Neuroscan SynAmps ' ...
-        'Net\n'], params.loadInfo.layout(2)) ;
-elseif params.loadInfo.layout(1) == 7; fprintf('Unspecified\n') ;
+elseif params.loadInfo.layout(1) == 4; fprintf('%i channel Mentalab Explore\n', ...
+        params.loadInfo.layout(2)) ;
+elseif params.loadInfo.layout(1) == 5; fprintf('Unspecified\n') ;
 end
 
 %% Channels of Interest
@@ -153,8 +154,7 @@ if isfield(params, 'lineNoise')
         if params.lineNoise.legacy; fprintf('Legacy\n') ;
         else; fprintf('Default\n') ;
         end
-    else
-        fprintf('Notch Filter\n') ;
+    else; fprintf('Notch Filter\n') ;
     end
 end
 
@@ -162,7 +162,7 @@ end
 if isfield(params, 'downsample')
     fprintf('Resample: ')
     if params.downsample == 0; fprintf('Off\n') ;
-    else; fprintf('On\n') ;
+    else; fprintf(sprintf('To %i Hz\n', params.downsample)) ;
     end
 end
 
@@ -195,6 +195,10 @@ if isfield(params, 'wavelet')
             else; fprintf('Hard\n') ;
             end
         end
+        fprintf(' - Functional Connectivity Analysis: ') ;
+        if params.wavelet.fc; fprintf('On\n') ;
+        else; fprintf('Off\n') ;
+        end
     end
 end
 
@@ -218,8 +222,7 @@ if params.segment.on
                 fprintf('Off\n') ;
             end
         end
-    else
-        fprintf(' - Segment Length: %g seconds\n', params.segment.length) ;
+    else; fprintf(' - Segment Length: %g seconds\n', params.segment.length) ;
     end
 end
 
@@ -246,6 +249,7 @@ if params.segRej.on
         fprintf('    - Segment Rejection based on All Channels or ROI: ') ;
         if params.segRej.ROI.on
             fprintf('ROI\n     - ROI Channels: ') ;
+            if ~params.segRej.ROI.include; fprintf('All except ') ; end
             fprintf([sprintf('%s, ', params.segRej.ROI.chans{1:end-1}), ...
                 params.segRej.ROI.chans{end} '\n']) ;
         else
@@ -296,8 +300,7 @@ if params.reref.on
             fprintf(['load\n    - Leadfield File: ' params.reref.rest.file '\n']) ;
         end
     end
-else
-    fprintf('Off\n') ;
+else; fprintf('Off\n') ;
 end
 
 %% Visualizations
@@ -333,12 +336,9 @@ end
 
 %% Save Format
 fprintf('Save Format: ') ;
-if params.outputFormat == 1
-    fprintf('.txt file\n') ;
-elseif params.outputFormat == 2
-    fprintf('.mat file\n') ;
-elseif params.outputFormat == 3
-    fprintf('.set file\n') ;
+if params.outputFormat == 1; fprintf('.txt file\n') ;
+elseif params.outputFormat == 2; fprintf('.mat file\n') ;
+elseif params.outputFormat == 3; fprintf('.set file\n') ;
 end
 disp("---------------------------------------------") ;    
 end

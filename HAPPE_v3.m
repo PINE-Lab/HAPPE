@@ -1,13 +1,13 @@
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-% HAPPE Version 3.0
+% HAPPE Version 3.1
 %
 % Developed at Northeastern University's PINE Lab
 %
 % For a detailed description of the pipeline and user options, please see 
 % the following manuscripts:
 %   Gabard-Durnam, et al., 2018 - HAPPE v1.
-%   Lopez, et al. (in press) - HAPPILEE
-%   Monachino, et al. (in press) - HAPPE+ER
+%   Lopez, et al. (2022) - HAPPILEE
+%   Monachino, et al. (2022) - HAPPE+ER
 %   ...
 %
 % Contributors to HAPPE:
@@ -28,10 +28,13 @@
 %   Cleanline by Tim Mullen (as an EEGLAB plug-in): Mullen, T. (2012). 
 %       NITRC: CleanLine: Tool/Resource Info. Available online at: 
 %       http://www.nitrc.org/projects/cleanline.
-%   FASTER segment-level channel interpolation code: Nolan, H., Whelan, R.,
-%       & Reilly, R.B. (2010). FASTER: Fully Automated Statistical Thresholding
-%       for EEG artifact Rejection. Journal of Neuroscience Methods, 192, 
-%       152-162.
+%   FASTER segment-level channel interpolation code (if interpolating 
+%       within segments): Nolan, H., Whelan, R., & Reilly, R.B. (2010). 
+%       FASTER: Fully Automated Statistical Thresholding for EEG artifact
+%       Rejection. Journal of Neuroscience Methods, 192, 152-162.
+%   ERPLAB (for Butterworth filter only): Lopez-Calderon J, Luck SJ. 
+%       ERPLAB: an open-source toolbox for the analysis of event-related 
+%       potentials. Front Hum Neurosci. 2014 Apr 14;8:213.
 %   ICLabel EEGLAB plugin (for muscIL option only) - Pion-Tonachini et al. 
 %       (2019). ICLabel: An automated electroencephalographic independent
 %       component classifier, dataset, and website. Neuroimage, 198, 181–197.
@@ -48,7 +51,7 @@
 % Any code that is not part of the third-party dependencies is released
 % under the GNU General Public License version 3.
 %
-% Copyright 2018, 2021 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
+% Copyright 2018-2022 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
 %
 % This program is free software: you can redistribute it and/or modify it
 % under the terms of the GNU General Public License (version 3) as
@@ -71,6 +74,16 @@
 % documentation is provided “as is.” The listed entities and/or software 
 % contributors are under no obligation to provide maintenance, support, 
 % updates, enhancements, or modifications.
+%~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+% ATTENTION: WE STRONGLY ADVISE AGAINST EDITING THE CODE UNLESS YOU HAVE 
+% ADVANCED KNOWLEDGE OF BOTH MATLAB CODING AND SIGNAL PROCESSING.
+%
+% If you do not have knowledge of both MATLAB coding and signal processing,
+% instead interface with this script by running it and entering your parameters in
+% the command window as detailed in the HAPPE User Guide.
+%
+% If you edit the code we CANNOT GUARANTEE the code will function as
+% intended and may negatively affect HAPPE's performance.
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 %% CLEAR THE WORKSPACE
@@ -116,10 +129,10 @@ end
 cd (srcDir) ;
 
 %% DETERMINE IF REPROCESSING DATA
-[reprocess, rerunExt] = isReprocessed() ;
+[reprocess, ranMuscIL, rerunExt] = isReprocessed() ;
 
 %% DETERMINE IF USING PRESET PARAMETERS
-ver = '2_3_0' ;
+ver = '2_3_1' ;
 [preExist, params, changeParams] = isPreExist(reprocess, ver) ;
 
 %% SET PARAMETERS
@@ -171,10 +184,37 @@ allDirNames = {'intermediate_processing', 'wavelet_cleaned_continuous', ...
 if ~params.paradigm.ERP.on; allDirNames(ismember(allDirNames, 'ERP_filtered')) = []; end
 if ~params.muscIL; allDirNames(ismember(allDirNames, 'muscIL')) = []; end
 dirNames = cell(1,size(allDirNames,2)) ;
-for i=1:length(allDirNames)
-    dirNames{i} = [num2str(i) ' - ' allDirNames{i}] ;
-    if ~isfolder([srcDir filesep num2str(i) ' - ' allDirNames{i}])
-        mkdir([srcDir filesep num2str(i) ' - ' allDirNames{i}]) ;
+if reprocess
+    currDirNames = dir(srcDir) ;
+    currDirNames = {currDirNames([dir(srcDir).isdir]).name} ;
+    if any(contains(allDirNames, 'muscIL')) && ~any(contains(currDirNames, 'muscIL'))
+        for i=1:length(allDirNames)
+            dirNames{i} = [num2str(i) ' - ' allDirNames{i}] ;
+            if ~isfolder(dirNames{i}) && ~any(contains(currDirNames, allDirNames{i}))
+                mkdir([srcDir filesep dirNames{i}]) ;
+            elseif ~isfolder(dirNames{i}) && any(contains(currDirNames, allDirNames{i}))
+                movefile(currDirNames{contains(currDirNames, allDirNames{i})}, dirNames{i}) ;
+            end
+        end
+    elseif ~any(contains(allDirNames, 'muscIL')) && any(contains(currDirNames, 'muscIL'))
+        wavInd = find(contains(setdiff(currDirNames, {'.', '..'}),'wavelet')) ;
+        allDirNames = [allDirNames(1:wavInd) 'muscIL' allDirNames(wavInd+1:end)] ;
+        for i=1:length(allDirNames)
+            dirNames{i} = [num2str(i) ' - ' allDirNames{i}] ;
+        end
+        clear('wavInd') ;
+    else
+        for i=1:length(allDirNames)
+            dirNames{i} = [num2str(i) ' - ' allDirNames{i}] ;
+        end
+    end
+    clear('currDirNames') ;
+else
+    for i=1:length(allDirNames)
+        dirNames{i} = [num2str(i) ' - ' allDirNames{i}] ;
+        if ~isfolder([srcDir filesep dirNames{i}])
+            mkdir([srcDir filesep dirNames{i}]) ;
+        end
     end
 end
 clear('allDirNames') ;
@@ -190,6 +230,7 @@ elseif params.loadInfo.inputFormat == 3; inputExt = '.set' ;
 elseif params.loadInfo.inputFormat == 4; inputExt = '.cdt' ;
 elseif params.loadInfo.inputFormat == 5; inputExt = '.mff' ;
 elseif params.loadInfo.inputFormat == 6; inputExt = '.EDF' ;
+elseif params.loadInfo.inputFormat == 7; inputExt = '.set' ;
 end
 % COLLECT FILE NAMES: gather the names of all the files with the relevant
 % file extension in the directory indicated by the user.
@@ -341,6 +382,10 @@ for currFile = 1:length(FileNames)
                     elseif params.loadInfo.inputFormat == 6
                         EEGraw = pop_biosig(FileNames{currFile}, ...
                             'blockepoch', 'off') ;
+                % ---------------------------------------------------------
+                % .BDF->.SET
+                    elseif params.loadInfo.inputFormat == 7
+                        EEGraw = pop_loadset('filename', FileNames{currFile}) ;
                     end
                 % ---------------------------------------------------------
                 % Determine the sampling rate from the loaded EEG. If task
@@ -543,10 +588,17 @@ for currFile = 1:length(FileNames)
                 % LOAD PRE-SEGMENTED PROCESSED DATA:
                 % Load the wavelet-thresholded data. Using the raw file to 
                 % locate and load the correct file.
-                EEGloaded = pop_loadset('filename', strrep(FileNames{currFile}, ...
+                if ranMuscIL
+                    EEGloaded = pop_loadset('filename', strrep(FileNames{currFile}, ...
+                        inputExt, '_muscILcleaned.set'), 'filepath', [srcDir ...
+                        filesep dirNames{contains(dirNames, ...
+                        'muscIL')}]) ;
+                else
+                    EEGloaded = pop_loadset('filename', strrep(FileNames{currFile}, ...
                         inputExt, '_wavclean.set'), 'filepath', [srcDir ...
                         filesep dirNames{contains(dirNames, ...
                         'wavelet_cleaned_continuous')}]) ;
+                end
                         
                 % VALIDATE LOADED FILE
                 EEG = eeg_checkset(EEGloaded) ;             
@@ -571,7 +623,7 @@ for currFile = 1:length(FileNames)
         end
         
         %% MUSCIL
-        if ~params.paradigm.ERP.on && params.muscIL
+        if ~params.paradigm.ERP.on && params.muscIL && ~ranMuscIL
             cd([srcDir filesep dirNames{contains(dirNames, 'muscIL')}]) ;
             try [EEG, dataQC] = happe_muscIL(EEG, dataQC, FileNames, ...
                     currFile, inputExt) ;
@@ -819,7 +871,7 @@ for currFile = 1:length(FileNames)
                 for i=1:size(params.paradigm.conds.groups,1)
                     eegByConds{i} = pop_selectevent(EEG, 'type', ...
                         params.paradigm.conds.groups(i,2:end)) ;
-                    dataQC_conds{currFile, i*3-1} = length(eegByConds(i).epoch) ;
+                    dataQC_conds{currFile, i*3-1} = length(eegByConds{i}.epoch) ;
                     dataQC_conds{currFile, i*3} = dataQC_conds{currFile, i*3-1} ...
                         / dataQC_conds{currFile, i*3-2}*100 ;
                 end
@@ -857,7 +909,7 @@ for currFile = 1:length(FileNames)
                         pop_saveset(eegByTags{i}, 'filename', ...
                             strrep(FileNames{currFile}, inputExt, ...
                             ['_processed_' params.paradigm.onsetTags{i} ...
-                            '_' rerunExt '.set'])) ;
+                            rerunExt '.set'])) ;
                     end
                 end
                 if params.paradigm.conds.on
@@ -865,8 +917,8 @@ for currFile = 1:length(FileNames)
                         if ~isempty(eegByConds{i})
                             pop_saveset(eegByConds{i}, 'filename', ...
                                 strrep(FileNames{currFile}, inputExt, ...
-                                ['_' params.paradigm.conds.groups{i,1} ...
-                                '_processed' rerunExt '.set'])) ;
+                                ['_processed_' params.paradigm.conds.groups{i,1} ...
+                                rerunExt '.set'])) ;
                         end
                     end
                 end
@@ -882,7 +934,7 @@ for currFile = 1:length(FileNames)
                     if ~isempty(currEEG)
                         save(strrep(FileNames{currFile}, inputExt, ...
                             ['_processed_' params.paradigm.onsetTags{i} ...
-                            '_' rerunExt '.mat']), 'currEEG') ;
+                            rerunExt '.mat']), 'currEEG') ;
                     end
                 end
                 if params.paradigm.conds.on
@@ -890,8 +942,8 @@ for currFile = 1:length(FileNames)
                         currEEG = eegByConds{i} ;
                         if ~isempty(currEEG)
                             save(strrep(FileNames{currFile}, inputExt, ...
-                                ['_' params.paradigm.conds.groups{i,1} ...
-                                '_processed' rerunExt '.mat']), 'currEEG') ;
+                                ['_processed_' params.paradigm.conds.groups{i,1} ...
+                                rerunExt '.mat']), 'currEEG') ;
                         end
                     end
                 end
@@ -947,7 +999,7 @@ for currFile = 1:length(FileNames)
         if size(line,2) > 1
             errList = [sprintf('Line %d in %s; ', line{1:end-1}, ...
                 name{1:end-1}) 'Line ' num2str(line{end}) ' in ' name{end}] ;
-        else; errList = ['Line ' num2str(line) ' in ' name] ;
+        else; errList = ['Line ' num2double(line{1}) ' in ' name] ;
         end
         errorLog = [errorLog; {FileNames{currFile}, ME.message, errList}] ;  %#ok<AGROW> 
         

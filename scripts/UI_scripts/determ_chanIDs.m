@@ -65,9 +65,7 @@ while true
             'a time.\nPress enter/return between each entry.\nExamples: ' ...
             'E17\n          M1\nWhen you have entered all channels, input ' ...
             '"done" (without quotations).\n']) ;
-        chanIDs = {} ;
-        indx = 1 ;
-        chanIDs = unique(UI_cellArray(indx, chanIDs), 'stable') ;
+        chanIDs = unique(UI_cellArray(1, {}), 'stable') ;
         break ;
     else; fprintf(['Invalid input: please enter "all" or "coi" (without ' ...
             'quotations)\n']) ;    
