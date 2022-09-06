@@ -999,7 +999,7 @@ for currFile = 1:length(FileNames)
         if size(line,2) > 1
             errList = [sprintf('Line %d in %s; ', line{1:end-1}, ...
                 name{1:end-1}) 'Line ' num2str(line{end}) ' in ' name{end}] ;
-        else; errList = ['Line ' num2double(line{1}) ' in ' name] ;
+        else; errList = ['Line ' num2str(line{1}) ' in ' name] ;
         end
         errorLog = [errorLog; {FileNames{currFile}, ME.message, errList}] ;  %#ok<AGROW> 
         
