@@ -63,10 +63,7 @@ if params.paradigm.task
     else; fprintf('NA\n') ;
     end
     fprintf(' - ERP Analysis: ') ;
-    if params.paradigm.ERP.on
-        fprintf('Yes\n') ;
-        fprintf('    - Lowpass Cutoff: %g\n', params.paradigm.ERP.lowpass) ;
-        fprintf('    - Highpass Cutoff: %g\n', params.paradigm.ERP.highpass) ;
+    if params.paradigm.ERP.on; fprintf('Yes\n') ;
     else; fprintf('No\n') ;
     end
 else; fprintf('Resting State\n') ;
@@ -168,8 +165,14 @@ end
 
 %% Filtering
 fprintf('Filter: ') ;
-if params.filt.butter; fprintf('ERPLABs bandpass Butterworth\n') ;
-else; fprintf('EEGLABs FIR\n') ;
+if params.filt.on
+    fprintf([' - Lowpass Cutoff: ' num2str(params.filt.lowpass) '/n' ...
+        ' - Highpass Cutoff: ' num2str(params.filt.highpass) '/n' ...
+        ' - Type: ']) ;
+    if params.filt.butter; fprintf('ERPLAB''s bandpass Butterworth\n') ;
+    else; fprintf('EEGLAB''s FIR\n') ;
+    end
+else; fprintf('Off\n') ;
 end
 
 %% Legacy Bad Channel Selection
@@ -195,10 +198,10 @@ if isfield(params, 'wavelet')
             else; fprintf('Hard\n') ;
             end
         end
-        fprintf(' - Functional Connectivity Analysis: ') ;
-        if params.wavelet.fc; fprintf('On\n') ;
-        else; fprintf('Off\n') ;
-        end
+%         fprintf(' - Functional Connectivity Analysis: ') ;
+%         if params.wavelet.fc; fprintf('On\n') ;
+%         else; fprintf('Off\n') ;
+%         end
     end
 end
 

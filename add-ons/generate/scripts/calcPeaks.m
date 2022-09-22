@@ -33,10 +33,10 @@
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
 function peakVals = calcPeaks(setWindows, subWindows, subGlobal)
-peakVals = cell(1,2*size(setWindows,2)+4) ;
+peakVals = cell(1,2*size(setWindows,1)+4) ;
 
 % Find Peak (Max or Min) in Windows
-for i=1:size(setWindows, 2)
+for i=1:size(setWindows, 1)
     currWin = subWindows{i} ;
     if strcmpi(setWindows{i, 3}, "max")
         [~, currPeakIndx] = max(currWin(:,2)) ;

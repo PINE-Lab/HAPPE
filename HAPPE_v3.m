@@ -132,7 +132,7 @@ cd (srcDir) ;
 [reprocess, ranMuscIL, rerunExt] = isReprocessed() ;
 
 %% DETERMINE IF USING PRESET PARAMETERS
-ver = '3_1_0' ;
+ver = '3_2_0' ;
 [preExist, params, changeParams] = isPreExist(reprocess, ver) ;
 
 %% SET PARAMETERS
@@ -501,6 +501,9 @@ for currFile = 1:length(FileNames)
                 fprintf(2, 'ERROR: Line noise reduction failed.\n') ;
                 rethrow(ME) ;
             end
+
+            pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
+                inputExt, '_lnreduced.set')) ;
             
             %% RESAMPLE DATA
             % If the user enabled downsampling, resample the data to the
@@ -518,16 +521,16 @@ for currFile = 1:length(FileNames)
             % Filter the EEG data. For ERP paradigms, only use a 100 Hz
             % bandpass. For all other paradigms, filter the data using both
             % a 1 Hz highpass and a 100 Hz lowpass.
-            if params.paradigm.ERP.on; EEG = pop_eegfiltnew(EEG, [], 100, ...
-                    [], 0, [], 0) ;
-            else; EEG = pop_eegfiltnew(EEG, 1, 100, [], 0, [], 0) ;
+            if ~params.paradigm.ERP.on && params.filt.on
+                EEG = pop_eegfiltnew(EEG, params.filt.highpass, ...
+                    params.filt.lowpass, [], 0, [], 0) ;
+                EEG.setname = [EEG.setname '_filt'] ;
+                % Save the filtered dataset to the intermediate_processing
+                % folder
+                pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
+                    inputExt, '_filtered.set')) ;
             end
-            EEG.setname = [EEG.setname '_filt'] ;
             
-            % Save the filtered dataset to the intermediate_processing
-            % folder
-            pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
-                inputExt, '_filtered_lnreduced.set')) ;
             
             %% DETECT BAD CHANNELS
             % If bad channel detection is on, detect and reject bad
@@ -558,6 +561,9 @@ for currFile = 1:length(FileNames)
             % the error to proceed to the next file.
             cd([srcDir filesep dirNames{contains(dirNames, ...
                 'wavelet_cleaned_continuous')}]) ;
+            pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
+                inputExt, '_prewav.set')) ;
+
             try [EEG, wavMeans, dataQC] = happe_wavThresh(EEG, params, ...
                     wavMeans, dataQC, currFile) ;
             catch ME
@@ -567,7 +573,7 @@ for currFile = 1:length(FileNames)
             
             % Save the wavelet-thresholded EEG as an intermediate output.
             pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
-                    inputExt, '_wavclean.set')) ;
+                inputExt, '_wavclean.set')) ;
 
         else
             %% LOAD AND VALIDATE PROCESSED FILE
@@ -651,13 +657,13 @@ for currFile = 1:length(FileNames)
                 % documentation for more information). Currently only
                 % available for ERP paradigms.
                 if params.filt.butter
-                    EEG = butterFilt(EEG, params.paradigm.ERP.lowpass, ...
-                        params.paradigm.ERP.highpass) ;
+                    EEG = butterFilt(EEG, params.filt.lowpass, ...
+                        params.filt.highpass) ;
                 % If the user indicated to use EEGLAB's FIR filter,
                 % filter using the EEGLAB function.
                 else
-                    EEG = pop_eegfiltnew(EEG, params.paradigm.ERP.highpass, ...
-                        params.paradigm.ERP.lowpass, [], 0, [], 0) ;
+                    EEG = pop_eegfiltnew(EEG, params.filt.highpass, ...
+                        params.filt.lowpass, [], 0, [], 0) ;
                 end
                 EEG.setname = [EEG.setname '_forERP'] ;
             catch ME
