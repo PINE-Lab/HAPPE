@@ -1101,8 +1101,14 @@ try
 
 % ERRORS IN WRITING OUTPUTS:
 catch ME
-    % Add the error to the error log.
-    errorLog = [errorLog; {'Outputs', ME.message}] ;
+    name = {ME.stack.name} ;
+    line = {ME.stack.line} ;
+    if size(line,2) > 1
+        errList = [sprintf('Line %d in %s; ', line{1:end-1}, ...
+            name{1:end-1}) 'Line ' num2str(line{end}) ' in ' name{end}] ;
+    else; errList = ['Line ' num2str(line{1}) ' in ' name] ;
+    end
+    errorLog = [errorLog; {FileNames{currFile}, ME.message, errList}] ;
 
     % Check for a common error, usually caused by the inability to process
     % any files at all or to completion.
