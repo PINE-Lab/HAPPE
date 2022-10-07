@@ -342,12 +342,20 @@ for currfile=1:size(FileNames, 2)+1
         allSubsERP{currfile} = currSubERPs ;
         if params.calcVals.on
             allSubPeaks{currfile} = currSubPeaks ;
-            MeanAmp_wind{currfile} = currSubMeanAmp_wind ;
-            MeanAmp_zero{currfile} = currSubMeanAmp_zero ;
-            AUC_wind{currfile} = currSubAUC_wind ;
-            AUC50_wind{currfile} = currSubAUC50_wind ;
-            AUC_zero{currfile} = currSubAUC_zero ;
-            AUC50_zero{currfile} = currSubAUC50_zero ;
+            if params.calcVals.meanAmpMethod(1)
+                MeanAmp_wind{currfile} = currSubMeanAmp_wind ;
+            end
+            if params.calcVals.meanAmpMethod(2)
+                MeanAmp_zero{currfile} = currSubMeanAmp_zero ;
+            end
+            if params.calcVals.aucMethod(1)
+                AUC_wind{currfile} = currSubAUC_wind ;
+                AUC50_wind{currfile} = currSubAUC50_wind ;
+            end
+            if params.calcVals.aucMethod(2)
+                AUC_zero{currfile} = currSubAUC_zero ;
+                AUC50_zero{currfile} = currSubAUC50_zero ;
+            end
         end
     catch; continue ;
     end
