@@ -80,9 +80,6 @@ else
     end
 
     % Set the wavelet family depending on user input
-%     if params.wavelet.fc; wavFam = 'bior6.8' ;
-%     else; wavFam = 'coif4' ;
-%     end
     wavFam = 'bior6.8' ;
 
     % Set the threshold rule depending on user input (when applicable) and

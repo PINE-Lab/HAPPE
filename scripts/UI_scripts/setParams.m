@@ -273,13 +273,14 @@ while true
         end
     elseif ~params.paradigm.ERP.on && (~preExist || strcmpi(paramChoice, ...
             'filter') && ~reprocessing)
-        fprintf('Filter your data? [Y/N]') ;
+        fprintf('Filter your data? [Y/N]\n') ;
         params.filt.on = choose2('N', 'Y') ;
         if params.filt.on
             params.filt.lowpass = input(['Enter low-pass filter, in Hz:\n' ...
                 'Common low-pass filter is 100 Hz.\n> ']) ;
             params.filt.highpass = input(['Enter high-pass filter, in Hz:\n' ...
-                'Common high-pass filter is 1 Hz.\n> ']) ;
+                'Common high-pass filter is 1 Hz. NOTE: Use a >=1 Hz filter' ...
+                ' if running muscIL.\n> ']) ;
         end
         params.filt.butter = 0 ;
     end
@@ -295,7 +296,33 @@ while true
             params.badChans.legacy = choose2('default', 'legacy') ;
         else; params.badChans.legacy = 0 ;
         end
-    end 
+    end
+
+    %% ECGONE
+    if (~preExist || strcmpi(paramChoice, 'ECGone')) && ~reprocessing
+        fprintf('Use ECGone to reduce ECG artifact in your data? [Y/N]\n') ;
+        params.ecgone.on = choose2('N', 'Y') ;
+        if params.ecgone.on
+            fprintf(['Does your data contain a dedicated ECG channel? [Y/N]' ...
+                '\n']) ;
+            params.ecgone.ECGchan.inc = choose2('N', 'Y') ;
+            if params.ecgone.ECGchan.inc
+                fprintf('Dedicated ECG channel name:\n') ;
+                params.ecgone.ECGchan.ID = input('> ', 's') ;
+            else
+                fprintf(['Enter the channel names containing ECG artifact' ...
+                    ' to create a proxy:\nPress enter/return between each' ...
+                    ' entry.\nExample: E17\nWhen you have entered all ' ...
+                    'channels, input "done" (without quotations).\n']) ;
+                params.ecgone.ECGchan.ID = unique(UI_cellArray(1, {}), 'stable') ;
+            end
+            fprintf('Window creation length in MILLISECONDS for peak detection:\n') ;
+            params.ecgone.peakWinSize = input('> ')/1000 ;
+%             fprintf('Template window creation length in SECONDS:\n') ;
+%             params.ecgone.procEpoch = input('> ') ;
+            params.ecgone.procEpoch = 30 ;
+        end
+    end
 
     %% WAVELET METHODOLOGY
     if (~preExist || strcmpi(paramChoice, 'wavelet thresholding')) && ~reprocessing
@@ -312,10 +339,6 @@ while true
             end
         end
     end
-%     if (~preExist || strcmpi(paramChoice, 'functional connectivity')) && ~reprocessing
-%         fprintf('Performing functional connectivity analyses? [Y/N]\n') ;
-%                 params.wavelet.fc = choose2('n', 'y') ;
-%     end
         
     %% MUSCIL
     if ~preExist || strcmpi(paramChoice, 'muscIL')

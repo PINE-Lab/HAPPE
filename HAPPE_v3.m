@@ -1,5 +1,5 @@
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-% HAPPE Version 3.1
+% HAPPE Version 3.2
 %
 % Developed at Northeastern University's PINE Lab
 %
@@ -933,7 +933,7 @@ for currFile = 1:length(FileNames)
         if params.outputFormat == 2
             save(strrep(FileNames{currFile}, inputExt, ['_processed' ...
                 rerunExt '.mat']), 'EEG') ;
-            if params.paradigm.task.on && size(params.paradigm.onsetTags, ...
+            if params.paradigm.task && size(params.paradigm.onsetTags, ...
                     2) > 1
                 for i=1:size(eegByTags, 2)
                     currEEG = eegByTags{i} ;
@@ -1055,7 +1055,8 @@ try
                 ' hz pre/post linenoise reduction'] ;
         end
         for i=1:size(params.lineNoise.harms.freqs, 2)
-            lnNames{i+size(params.lineNoise.neighbors, 2)+1} = ['r ' num2str(params.lineNoise.harms.freqs) ...
+            lnNames{i+size(params.lineNoise.neighbors, 2)+1} = ['r ' ...
+                num2str(params.lineNoise.harms.freqs(i)) ...
                 ' hz pre/post harmonic reduction'] ;
         end
         
