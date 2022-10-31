@@ -201,12 +201,12 @@ if nargin < 1
         'Check your montage in the channel editor and import' 10 ...
         'the correct location file if necessary.' ]);
 end
-if all(EEG.data(end,1:10) == 0)
-    disp('Deleting empty data reference channel (reference channel location is retained)');
-    EEG.data(end,:)   = [];
-    EEG.nbchan        = size(EEG.data,1);
-    EEG = eeg_checkset(EEG);
-end
+% if all(EEG.data(end,1:10) == 0)
+%     disp('Deleting empty data reference channel (reference channel location is retained)');
+%     EEG.data(end,:)   = [];
+%     EEG.nbchan        = size(EEG.data,1);
+%     EEG = eeg_checkset(EEG);
+% end
 if ~isempty(fileloc)
     if strcmpi(fileloc, 'auto')
         EEG = readegilocs(EEG);

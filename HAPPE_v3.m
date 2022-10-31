@@ -417,7 +417,6 @@ for currFile = 1:length(FileNames)
                 % INFORMATION PARAMETERS
                 if params.loadInfo.layout(1) == 1
                     if params.loadInfo.layout(2) == 64
-                        params.loadInfo.chanlocs.file = [] ;
                         params.loadInfo.chanlocs.file = [happeDir filesep ...
                             'acquisition_layout_information' filesep ...
                             'GSN65v2_0.sfp'] ;
@@ -439,7 +438,7 @@ for currFile = 1:length(FileNames)
                 EEG = eeg_checkset(EEG) ;
             end
             
-            %% SET (AND CORRECT) THE REFERENCE CHANNEL
+            %% SET THE FLATLINE REFERENCE CHANNEL
             % If the reference channel is included in the data, remove it
             % from the data channels. This will prevent it from being 
             % falsely flagged as a bad channel.
@@ -452,7 +451,20 @@ for currFile = 1:length(FileNames)
                     EEG.nbchan = EEG.nbchan - 1;
                     EEG.chaninfo.refChan = EEG.chanlocs(indx) ;
                     EEG.chanlocs(indx) = [] ;
-                end   
+                elseif ismember(params.reref.chan, {EEG.chaninfo.nodatchans.labels})
+                    indx = find(strcmpi({EEG.chaninfo.nodatchans.labels}, ...
+                        params.reref.chan)) ;
+                    EEG.chaninfo.refChan = EEG.chaninfo.nodatchans(indx) ;
+                    EEG.chaninfo.refChan = rmfield(EEG.chaninfo.refChan, ...
+                        'datachan') ;
+                    warning(['Located reference channel in nodatchans.' ...
+                        ' Channel locations for this channel may ' ...
+                        'not be correct!']) ;
+                else
+                    warning(['Unable to locate your defined reference ' ...
+                        'channel!']) ;
+                    params.reref.flat = 0 ;
+                end 
             end
 
             %% UPDATE CHANNEL IDS AND FILTER TO THE CHANNELS OF INTEREST
@@ -487,6 +499,10 @@ for currFile = 1:length(FileNames)
                 chanIDs = 1:size(EEG.data,1) ;
             end
 
+            % Enter the intermediate_processing folder
+            cd([srcDir filesep dirNames{contains(dirNames, ...
+                'intermediate_processing')}]) ;
+
             %% REDUCE LINE NOISE
             % Attempt to reduce line noise using the happe_reduceLN
             % function (see function for further documentation). If HAPPE
@@ -515,9 +531,6 @@ for currFile = 1:length(FileNames)
             end
 
             %% FILTER AND SAVE INTERMEDIATE FILE
-            % Enter the intermediate_processing folder
-            cd([srcDir filesep dirNames{contains(dirNames, ...
-                'intermediate_processing')}]) ;
             % Filter the EEG data. For ERP paradigms, only use a 100 Hz
             % bandpass. For all other paradigms, filter the data using both
             % a 1 Hz highpass and a 100 Hz lowpass.
