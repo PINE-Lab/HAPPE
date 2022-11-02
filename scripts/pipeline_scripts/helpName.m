@@ -30,10 +30,12 @@
 % You should have received a copy of the GNU General Public License along
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
-function saveName = helpName(saveName)
+function saveName = helpName(saveName, ext)
+saveNameTemp = saveName ;
 i = 2 ;
-while isfile(saveName)
-    saveName = strrep(saveName, '.csv', ['_' num2str(i) '.csv']) ;
+while isfile(saveNameTemp)
+    saveNameTemp = strrep(saveName, ext, ['_' num2str(i) ext]) ;
     i = i+1 ;
 end
+saveName = saveNameTemp ;
 end

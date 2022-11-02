@@ -1088,7 +1088,7 @@ try
         
         % Save the pipeline QC table.
         pipelineQC_saveName = helpName(['HAPPE_pipelineQC' rerunExt '_' ...
-            datestr(now, 'dd-mm-yyyy') '.csv']) ;
+            datestr(now, 'dd-mm-yyyy') '.csv'], '.csv') ;
         writetable(array2table(pipelineQC, 'VariableNames', pipelineQC_names, ...
             'RowNames', FileNames), pipelineQC_saveName, 'WriteRowNames', ...
             true, 'QuoteStrings', true);
@@ -1108,7 +1108,7 @@ try
     
     % Save the data QC table.
     dataQC_saveName = helpName(['HAPPE_dataQC' rerunExt '_' datestr(now, ...
-        'dd-mm-yyyy') '.csv']) ;
+        'dd-mm-yyyy') '.csv'], '.csv') ;
     writetable(cell2table(dataQC, 'VariableNames', dataQCnames, 'RowNames', ...
         FileNames), dataQC_saveName, 'WriteRowNames', true, 'QuoteStrings', ...
         true) ;
@@ -1138,7 +1138,7 @@ end
 if ~isempty(errorLog)
     fprintf('Saving error log...\n') ;
     errTabName = helpName(['HAPPE_errorLog_' datestr(now, 'dd-mm-yyyy') ...
-        '.csv']) ;
+        '.csv'], '.csv') ;
     writetable(cell2table(errorLog, 'VariableNames', {'File', ...
         'Error Message' 'Stack Trace'}), errTabName) ;
 end
