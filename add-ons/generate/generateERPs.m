@@ -33,7 +33,7 @@ addpath([happeDir filesep 'scripts'], ...
     [happeDir filesep 'scripts' filesep 'UI_scripts'], ...
     [happeDir filesep 'add-ons'], ...
     [happeDir filesep 'add-ons' filesep 'generate'], ...
-    [happeDir filesep 'add-ons' filesep 'generate' filesep 'scripts']) ;
+    [happeDir filesep 'add-ons' filesep 'scripts']) ;
 
 %% DETERMINE AND SET PATH TO THE DATA
 % Use input from the command line to set the path to the data. If an 
@@ -192,7 +192,7 @@ for currfile=1:size(FileNames, 2)+1
         for i = 1:size(FileNames,2)
             temp = [temp allSubsERP{i}(:,end-endInd)] ;
         end
-        allSubsERP{end} = mean(temp,2) ;
+        allSubsERP{end} = mean(temp,2,'omitnan') ;
         trialBounds = [1 size(allSubsERP{end},1)] ;
     end
     
@@ -285,7 +285,7 @@ for currfile=1:size(FileNames, 2)+1
                 % CALCULATE MEAN AMPLITUDE
                 if params.calcVals.meanAmpMethod(1)
                     for i=1:size(currTrialWins,2)
-                        currSubMeanAmp_wind{currtrial,i} = mean(currTrialWins{i}(:,2)) ;
+                        currSubMeanAmp_wind{currtrial,i} = mean(currTrialWins{i}(:,2), 'omitnan') ;
                     end
                 end
                 if params.calcVals.meanAmpMethod(2)

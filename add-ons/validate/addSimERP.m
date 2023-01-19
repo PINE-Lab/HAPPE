@@ -43,17 +43,18 @@ end
 [chansAll, chanIDs] = determ_chanIDs() ;
 
 %% DETERMINE ERP TO INSERT
-% fprintf(['Which ERP waveform would you like to add to your data?\n  VEP - ' ...
-%     'Visual Evoked Potential\n']) ;
-% suppERPs = {'VEP'} ;
-% while true
-%     selERP = upper(input('> ', 's')) ;
-%     if any(strcmpi(selERP, suppERPs)); break ;
-%     else; fprintf(['Invalid input: please enter one of the following: ' ...
-%             sprintf('%s, ', suppERPs{1:end-1}), suppERPs{end} '.\n']) ;
-%     end
-% end
-selERP = 'VEP' ;
+fprintf(['Which ERP waveform would you like to add to your data?\n  VEP - ' ...
+    'Visual Evoked Potential\n  p3-10 - P3 with Amplitude 10, Variation 4\n' ...
+    '  p3-20 - P3 with Amplitude 20, Variation 7\n']) ;
+suppERPs = {'VEP', 'p3-10', 'p3-20'} ;
+while true
+    selERP = upper(input('> ', 's')) ;
+    if any(strcmpi(selERP, suppERPs)); break ;
+    else; fprintf(['Invalid input: please enter one of the following: ' ...
+            sprintf('%s, ', suppERPs{1:end-1}), suppERPs{end} '.\n']) ;
+    end
+end
+% selERP = 'VEP' ;
 
 %% CREATE OUTPUT FOLDERS
 % Create the folder in which to store final outputs.
@@ -70,6 +71,7 @@ scriptDir = fileparts(which(mfilename('fullpath'))) ;
 load([scriptDir filesep 'etc' filesep selERP '_ts.mat']) ;
 load([scriptDir filesep 'etc' filesep selERP '_events.mat']) ;
 
+cd(srcDir) ;
 FileNames = {dir('*.set').name} ;
 
 %% LOOP OVER EACH FILE
@@ -107,14 +109,16 @@ for currFile=1:length(FileNames)
     end
     
     %% ADD EVENTS TO THE EVENT LIST
+    lats = {event.latency} ;
+    inits = {event.init_time} ;
     for i=1:lngthmult-1
         fullERP = [fullERP ERP] ;
         for j=1:length(event)
-            tempevent(i*length(event)+j).type = 'VEP' ;
-            tempevent(i*length(event)+j).latency = 125*((i*length(event)-1)+j)+1;
+            tempevent(i*length(event)+j).type = event(j).type ;
+            tempevent(i*length(event)+j).latency = (lats{2}-lats{1})*((i*length(event)-1)+j)+1;
             tempevent(i*length(event)+j).duration = 1 ;
             tempevent(i*length(event)+j).init_index = 1 ;
-            tempevent(i*length(event)+j).init_time = (i*(length(event)-1)+j)* .5 ;
+            tempevent(i*length(event)+j).init_time = ((i*length(event)+j)-1)*(inits{2}-inits{1}) ;
         end
     end
     
@@ -145,5 +149,5 @@ for currFile=1:length(FileNames)
     
     %% SAVE UPDATED EEG
     pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, '.set', ...
-        '+VEP.set'), 'filepath', [srcDir filesep '+VEP']) ;
+        ['+' selERP '.set']), 'filepath', [srcDir filesep '+' selERP]) ;
 end

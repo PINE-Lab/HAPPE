@@ -49,7 +49,7 @@ function params = setParams(params, preExist, reprocessing, changedParams, happe
 paramChoice = 'na' ;
 while true
     %% BREAK IF NOT CHANGING ANY PRE-EXISTING PARAMETERS
-    if preExist && ~changedParams; break ; end
+    if preExist && ~changedParams; break; end
     %% IF CHANGING PARAMETERS
     % SET THE CHANGE MESSAGE BASED ON THE AVAILABLE OPTIONS ACCORDING TO
     % THE PARADIGM AND REPROCESSING STATE
