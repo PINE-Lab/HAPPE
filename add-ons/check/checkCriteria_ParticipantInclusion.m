@@ -22,7 +22,7 @@ cd (srcDir) ;
 
 %% COLLECT FILES TO RUN
 fprintf('Gathering files...\n') ;
-FileNames = {dir('*.csv').name} ;
+FileNames = [{dir('*.csv').name} {dir('*.xlsx').name}] ;
 indxDataQC = [];
 indxPipelineQC = [];
 for i=1:size(FileNames,2)
@@ -213,45 +213,46 @@ while true
         fprintf(['Use r pre/post waveleting by frequency as exclusion ' ...
             'criteria? [Y/N]\n']) ;
         params.pipelineQC.rhz{1,2} = choose2('N','Y') ;
-        % Choose custom set or all. If custom, enter the list of
-        % frequencies.
-        fprintf(['Use all included frequencies or a subset?\n  all = Use' ...
-            ' all frequencies included in the QC sheet.\n  subset = Use ' ...
-            'a subset of frequencies included in the QC sheet.\n']) ;
-        if choose2('all', 'subset')
-            fprintf(['Enter the frequencies of interest, one at a time, ' ...
-                'pressing enter/return between each entry.\nWhen you are ' ...
-                'finished, enter "done" (without quotations).\n']) ;
-            freqs = {} ;
-            while true
-                ui = input('> ','s') ;
-                if strcmpi(ui, 'done'); break;
-                elseif any(ismember(params.pipelineQC.rhz{1,3}(:,1),ui))
-                    freqs = unique([freqs ui], 'stable') ;
-                else; fprintf([ui ' Hz is not a valid frequency.\n']) ;
+        if params.pipelineQC.rhz{1,2}
+            % Choose custom set or all. If custom, enter the list of
+            % frequencies.
+            fprintf(['Use all included frequencies or a subset?\n  all = Use' ...
+                ' all frequencies included in the QC sheet.\n  subset = Use ' ...
+                'a subset of frequencies included in the QC sheet.\n']) ;
+            if choose2('all', 'subset')
+                fprintf(['Enter the frequencies of interest, one at a time, ' ...
+                    'pressing enter/return between each entry.\nWhen you are ' ...
+                    'finished, enter "done" (without quotations).\n']) ;
+                freqs = {} ;
+                while true
+                    ui = input('> ','s') ;
+                    if strcmpi(ui, 'done'); break;
+                    elseif any(ismember(params.pipelineQC.rhz{1,3}(:,1),ui))
+                        freqs = unique([freqs ui], 'stable') ;
+                    else; fprintf([ui ' Hz is not a valid frequency.\n']) ;
+                    end
+                end
+                params.pipelineQC.rhz{1,3} = [freqs' cell(size(freqs,2),1)] ;
+            end
+            % Use multiple values or a single cutoff value?
+            fprintf(['Use a single value for exclusion for all frequencies or ' ...
+                'specify by frequency?\n  single = Use a single ' ...
+                ' value for every frequency\n  specify = Choose a value' ...
+                ' for each frequency\n'])
+            if choose2('single','specify')
+                for i=1:size(params.pipelineQC.rhz{1,3},1)
+                    fprintf(['Enter minimum value for inclusion at ' ...
+                        params.pipelineQC.rhz{1,3}{i,1} ' Hz:\n']) ;
+                    params.pipelineQC.rhz{1,3}{i,2} = str2double(input('> ','s')) ;
+                end
+            else
+                val = input(['Enter minimum value for inclusion:\nExample: ' ...
+                    '0.5\n> '], 's') ;
+                for i=1:size(params.pipelineQC.rhz{1,3},1)
+                    params.pipelineQC.rhz{1,3}{i,2} = str2double(val) ;
                 end
             end
-            params.pipelineQC.rhz{1,3} = [freqs' cell(size(freqs,2),1)] ;
         end
-        % Use multiple values or a single cutoff value?
-        fprintf(['Use a single value for exclusion for all frequencies or ' ...
-            'specify by frequency?\n  single = Use a single ' ...
-            ' value for every frequency\n  specify = Choose a value' ...
-            ' for each frequency\n'])
-        if choose2('single','specify')
-            for i=1:size(params.pipelineQC.rhz{1,3},1)
-                fprintf(['Enter minimum value for inclusion at ' ...
-                    params.pipelineQC.rhz{1,3}{i,1} ' Hz:\n']) ;
-                params.pipelineQC.rhz{1,3}{i,2} = str2double(input('> ','s')) ;
-            end
-        else
-            val = input(['Enter minimum value for inclusion:\nExample: ' ...
-                '0.5\n> '], 's') ;
-            for i=1:size(params.pipelineQC.rhz{1,3},1)
-                params.pipelineQC.rhz{1,3}{i,2} = str2double(val) ;
-            end
-        end
-        
     end
 
     %% CONFIRM PARAMETERS:
@@ -294,197 +295,217 @@ end
 
 %% RUN ON DATAQC FILES
 for currFile = 1:size(indxDataQC,2)
-    resultsTab = readtable(FileNames{indxDataQC(currFile)}, 'PreserveVariableNames', true) ;
-    % DETERMINE INCLUSION BY PERCENT GOOD CHANNELS, PERCENT VARIANCE,
-    % PERCENT ICS REJECTED, AND NUMBER OF SEGMENTS POST-REJECTION
-    singles = cell(size(resultsTab,1), sum(cell2mat(params.dataQC.single(:,2)))) ;
-    indx = 1;
-    for currThresh=1:size(params.dataQC.single(:,1),1)
-        if params.dataQC.single{currThresh,2}
-            vals = resultsTab.(params.dataQC.single{currThresh,1}) ;
-            for i=1:size(vals,1)
-                if (strcmpi(params.dataQC.single{currThresh,4}, 'min') && ...
-                        vals(i) > params.dataQC.single{currThresh,3}) || ...
-                        (strcmpi(params.dataQC.single{currThresh,4}, 'max') && ...
-                        vals(i) < params.dataQC.single{currThresh,3})
-                    singles{i, indx} = 'include' ;
-                else; singles{i, indx} = 'exclude' ;
+    try
+        resultsTab = readtable(FileNames{indxDataQC(currFile)}, 'PreserveVariableNames', true) ;
+        % DETERMINE INCLUSION BY PERCENT GOOD CHANNELS, PERCENT VARIANCE,
+        % PERCENT ICS REJECTED, AND NUMBER OF SEGMENTS POST-REJECTION
+        singles = cell(size(resultsTab,1), sum(cell2mat(params.dataQC.single(:,2)))) ;
+        indx = 1;
+        for currThresh=1:size(params.dataQC.single(:,1),1)
+            if params.dataQC.single{currThresh,2}
+                vals = resultsTab.(params.dataQC.single{currThresh,1}) ;
+                for i=1:size(vals,1)
+                    if (strcmpi(params.dataQC.single{currThresh,4}, 'min') && ...
+                            vals(i) > params.dataQC.single{currThresh,3}) || ...
+                            (strcmpi(params.dataQC.single{currThresh,4}, 'max') && ...
+                            vals(i) < params.dataQC.single{currThresh,3})
+                        singles{i, indx} = 'include' ;
+                    else; singles{i, indx} = 'exclude' ;
+                    end
                 end
-            end
-            indx = indx+1 ;
-        end
-    end
-
-    % DETERMINE INCLUSION BY NUMBER OF SEGMENTS POST-REJECTION BY TAG
-    tags = cell(size(resultsTab,1), size(params.dataQC.multiple{1,3}, 1)) ;
-    if params.dataQC.multiple{1,2}
-        for currThresh = 1:size(params.dataQC.multiple{1,3},1)
-            vals = resultsTab.(strrep(params.dataQC.multiple{1,1}, ...
-                'TAG', params.dataQC.multiple{1,3}{currThresh,1})) ;
-            for i=1:size(vals,1)
-                if vals(i) > params.dataQC.multiple{1,3}{currThresh,2}
-                    tags{i, currThresh} = 'include' ;
-                else; tags{i, currThresh} = 'exclude' ;
-                end
+                indx = indx+1 ;
             end
         end
-    end
-    % DETERMINE INCLUSION BY NUMBER OF SEGMENTS POST-REJECTION BY
-    % CONDITION
-    conds = cell(size(resultsTab,1), size(params.dataQC.multiple{2,3}, 1)) ;
-    if params.dataQC.multiple{2,2}
-        for currThresh = 1:size(params.dataQC.multiple{2,3},1)
-            vals = resultsTab.(strrep(params.dataQC.multiple{2,1}, ...
-                'CONDITION', params.dataQC.multiple{2,3}{currThresh,1})) ;
-            for i=1:size(vals,1)
-                if vals(i) > params.dataQC.multiple{2,3}{currThresh,2}
-                    tags{i, currThresh} = 'include' ;
-                else; tags{i, currThresh} = 'exclude' ;
-                end
-            end
-        end
-    end
     
-    % DETERMINE INCLUSION BY THE BAD CHANNELS IN A ROI
-    badChans = cell(size(resultsTab,1), params.dataQC.badChanROIs{1, ...
-        1}*size(params.dataQC.badChanROIs{1,2},1)) ;
-    if params.dataQC.badChanROIs{1}
-        badChanIDs = table2cell(resultsTab(:,'Bad_Chan_IDs')) ;
-        for currThresh=1:size(params.dataQC.badChanROIs{1,2},1)
-            for i=1:size(badChanIDs,1)
-                currBadIDs = split(badChanIDs{i}) ;
-                if length(intersect(currBadIDs, params.dataQC.badChanROIs{2}{currThresh,1})) ...
-                        >= params.dataQC.badChanROIs{2}{currThresh,2}
-                    badChans{i,currThresh} = 'exclude' ;
-                else; badChans{i,currThresh} = 'include' ;
+        % DETERMINE INCLUSION BY NUMBER OF SEGMENTS POST-REJECTION BY TAG
+        tags = cell(size(resultsTab,1), size(params.dataQC.multiple{1,3}, 1)) ;
+        if params.dataQC.multiple{1,2}
+            for currThresh = 1:size(params.dataQC.multiple{1,3},1)
+                vals = resultsTab.(strrep(params.dataQC.multiple{1,1}, ...
+                    'TAG', params.dataQC.multiple{1,3}{currThresh,1})) ;
+                for i=1:size(vals,1)
+                    if vals(i) > params.dataQC.multiple{1,3}{currThresh,2}
+                        tags{i, currThresh} = 'include' ;
+                    else; tags{i, currThresh} = 'exclude' ;
+                    end
                 end
             end
         end
-    end
-
-    % DETERMINE INCLUSION ACROSS CRITERIA
-    output = [singles, tags, conds, badChans, cell(size(resultsTab,1),1)] ;
-    for i=1:size(resultsTab,1)
-        if ismember('exclude', output(i,1:end-1)); output{i,end} = 'exclude' ;
-        else; output{i,end} = 'include' ;
-        end
-    end
-
-    % OUTPUT A .CSV WITH THE INCLUSION/EXCLUSION INFORMATION
-    singlenames = cell(1,size(singles,2)) ;
-    indx = 1;
-    for i=1:size(params.dataQC.single,1)
-        if params.dataQC.single{i,2} && strcmpi(params.dataQC.single{i,4}, 'min')
-            singlenames{indx} = [params.dataQC.single{i,1} ' > ' ...
-                num2str(params.dataQC.single{i,3})] ;
-            indx = indx+1 ;
-        elseif params.dataQC.single{i,2} && strcmpi(params.dataQC.single{i,4}, 'max')
-            singlenames{indx} = [params.dataQC.single{i,1} ' < ' ...
-                num2str(params.dataQC.single{i,3})] ;
-            indx = indx + 1 ;
-        end
-    end
-    tagnames = cell(1,size(params.dataQC.multiple{1,3},1)) ;
-    for i=1:size(tagnames,2)
-        tagnames{i} = [strrep(params.dataQC.multiple{1,1}, 'TAG', ...
-            params.dataQC.multiple{1,3}{i,1}) ' > ' ...
-            num2str(params.dataQC.multiple{1,3}{i,2})] ;
-    end
-    condnames = cell(1,size(params.dataQC.multiple{2,3},1)) ;
-    for i=1:size(condnames,2)
-        condnames{i} = [strrep(params.dataQC.multiple{2,1}, 'COND', ...
-            params.dataQC.multiple{2,3}{i,1}) ' > ' ...
-            num2str(params.dataQC.multiple{2,3}{i,2})];
-    end
-    roinames = cell(1,size(params.dataQC.badChanROIs{1,2},1)) ;
-    if params.dataQC.badChanROIs{1}
-            for i=1:size(roinames,2)
-                roinames{i} = [params.dataQC.badChanROIs{1,2}{i,3} ': ' ...
-                    sprintf('%s, ', params.dataQC.badChanROIs{1,2}{i,1}{1:end-1}) ...
-                    params.dataQC.badChanROIs{1,2}{i,1}{end} ' > ' ...
-                    num2str(params.dataQC.badChanROIs{1,2}{i,2})] ;
+        % DETERMINE INCLUSION BY NUMBER OF SEGMENTS POST-REJECTION BY
+        % CONDITION
+        conds = cell(size(resultsTab,1), size(params.dataQC.multiple{2,3}, 1)) ;
+        if params.dataQC.multiple{2,2}
+            for currThresh = 1:size(params.dataQC.multiple{2,3},1)
+                vals = resultsTab.(strrep(params.dataQC.multiple{2,1}, ...
+                    'CONDITION', params.dataQC.multiple{2,3}{currThresh,1})) ;
+                for i=1:size(vals,1)
+                    if vals(i) > params.dataQC.multiple{2,3}{currThresh,2}
+                        tags{i, currThresh} = 'include' ;
+                    else; tags{i, currThresh} = 'exclude' ;
+                    end
+                end
             end
+        end
+        
+        % DETERMINE INCLUSION BY THE BAD CHANNELS IN A ROI
+        badChans = cell(size(resultsTab,1), params.dataQC.badChanROIs{1, ...
+            1}*size(params.dataQC.badChanROIs{1,2},1)) ;
+        if params.dataQC.badChanROIs{1}
+            badChanIDs = table2cell(resultsTab(:,'Bad_Chan_IDs')) ;
+            for currThresh=1:size(params.dataQC.badChanROIs{1,2},1)
+                for i=1:size(badChanIDs,1)
+                    currBadIDs = split(badChanIDs{i}) ;
+                    if length(intersect(currBadIDs, params.dataQC.badChanROIs{2}{currThresh,1})) ...
+                            >= params.dataQC.badChanROIs{2}{currThresh,2}
+                        badChans{i,currThresh} = 'exclude' ;
+                    else; badChans{i,currThresh} = 'include' ;
+                    end
+                end
+            end
+        end
+    
+        % DETERMINE INCLUSION ACROSS CRITERIA
+        output = [singles, tags, conds, badChans, cell(size(resultsTab,1),1)] ;
+        for i=1:size(resultsTab,1)
+            if ismember('exclude', output(i,1:end-1)); output{i,end} = 'exclude' ;
+            else; output{i,end} = 'include' ;
+            end
+        end
+    
+        % OUTPUT A .CSV WITH THE INCLUSION/EXCLUSION INFORMATION
+        singlenames = cell(1,size(singles,2)) ;
+        indx = 1;
+        for i=1:size(params.dataQC.single,1)
+            if params.dataQC.single{i,2} && strcmpi(params.dataQC.single{i,4}, 'min')
+                singlenames{indx} = [params.dataQC.single{i,1} ' > ' ...
+                    num2str(params.dataQC.single{i,3})] ;
+                indx = indx+1 ;
+            elseif params.dataQC.single{i,2} && strcmpi(params.dataQC.single{i,4}, 'max')
+                singlenames{indx} = [params.dataQC.single{i,1} ' < ' ...
+                    num2str(params.dataQC.single{i,3})] ;
+                indx = indx + 1 ;
+            end
+        end
+        tagnames = cell(1,size(params.dataQC.multiple{1,3},1)) ;
+        for i=1:size(tagnames,2)
+            tagnames{i} = [strrep(params.dataQC.multiple{1,1}, 'TAG', ...
+                params.dataQC.multiple{1,3}{i,1}) ' > ' ...
+                num2str(params.dataQC.multiple{1,3}{i,2})] ;
+        end
+        condnames = cell(1,size(params.dataQC.multiple{2,3},1)) ;
+        for i=1:size(condnames,2)
+            condnames{i} = [strrep(params.dataQC.multiple{2,1}, 'COND', ...
+                params.dataQC.multiple{2,3}{i,1}) ' > ' ...
+                num2str(params.dataQC.multiple{2,3}{i,2})];
+        end
+        roinames = cell(1,size(params.dataQC.badChanROIs{1,2},1)) ;
+        if params.dataQC.badChanROIs{1}
+                for i=1:size(roinames,2)
+                    roinames{i} = [params.dataQC.badChanROIs{1,2}{i,3} ': ' ...
+                        sprintf('%s, ', params.dataQC.badChanROIs{1,2}{i,1}{1:end-1}) ...
+                        params.dataQC.badChanROIs{1,2}{i,1}{end} ' > ' ...
+                        num2str(params.dataQC.badChanROIs{1,2}{i,2})] ;
+                end
+        end
+        tabnames = [singlenames, tagnames, condnames, roinames, 'Across_Criteria'] ;
+        savename = replace(FileNames{indxDataQC(currFile)}, {'.csv','.xlsx'}, '_ParticipantInclusion.csv') ;
+        indx = 2 ;
+        while isfile(savename)
+            savename = strrep(savename, '.csv', ['_' num2str(indx) '.csv']) ;
+            indx = indx+1 ;
+        end
+        writetable(cell2table(output, 'VariableNames', tabnames, 'RowNames', ...
+            table2cell(resultsTab(:,'Row'))), savename, 'WriteRowNames', ...
+            true, 'QuoteStrings', true) ;
+    catch ME
+        fprintf(['Unable to process ' FileNames{indxDataQC(currFile)} '\n']) ;
     end
-    tabnames = [singlenames, tagnames, condnames, roinames, 'Across_Criteria'] ;
-    savename = ['HAPPE_dataQC_inclusion_' datestr(now, 'dd-mm-yyyy') '.csv'] ;
-    indx = 2 ;
-    while isfile(savename)
-        savename = [savename '_' indx] ;
-        indx = indx+1 ;
-    end
-    writetable(cell2table(output, 'VariableNames', tabnames, 'RowNames', ...
-        table2cell(resultsTab(:,'Row'))), savename, 'WriteRowNames', ...
-        true, 'QuoteStrings', true) ;
 end
 
 %% RUN ON PIPELINEQC FILES
 for currFile = 1:size(indxPipelineQC,2)
-    resultsTab = readtable(FileNames{indxPipelineQC(currFile)}, 'PreserveVariableNames', true) ;
-
-    linenoise = cell(size(resultsTab,1),params.pipelineQC.linenoise{1,2}) ;
-    if params.pipelineQC.linenoise{1,2}
-        vals = resultsTab.(strrep(params.pipelineQC.linenoise{1}, 'FREQ', ...
-            params.pipelineQC.linenoise{3})) ;
-        for i=1:size(vals,1)
-            if vals(i) > params.pipelineQC.linenoise{4}; linenoise{i} = 'include' ;
-            else; linenoise{i} = 'exclude' ;
-            end
-        end
-    end
-
-    ralldata = cell(size(resultsTab,1),params.pipelineQC.ralldata{1,2}) ;
-    if params.pipelineQC.ralldata{1,2}
-        vals = resultsTab.(params.pipelineQC.ralldata{1}) ;
-        for i=1:size(vals,1)
-            if vals(i) > params.pipelineQC.ralldata{3}; ralldata{i} = 'include' ;
-            else; ralldata{i} = 'exclude' ;
-            end
-        end
-    end
-
-    rhz = cell(size(resultsTab,1), params.pipelineQC.rhz{2}*size(params.pipelineQC.rhz{3},1)) ;
-    if params.pipelineQC.rhz{2}
-        for currThresh=1:size(params.pipelineQC.rhz{3},1)
-            vals = resultsTab.(strrep(params.pipelineQC.rhz{1}, 'FREQ', ...
-                params.pipelineQC.rhz{3}{currThresh,1})) ;
+    try
+        resultsTab = readtable(FileNames{indxPipelineQC(currFile)}, ...
+            'PreserveVariableNames', true) ;
+    
+        linenoise = cell(size(resultsTab,1),params.pipelineQC.linenoise{1,2}) ;
+        if params.pipelineQC.linenoise{1,2}
+            vals = resultsTab.(strrep(params.pipelineQC.linenoise{1}, 'FREQ', ...
+                params.pipelineQC.linenoise{3})) ;
             for i=1:size(vals,1)
-                if vals(i) > params.pipelineQC.rhz{1,3}{currThresh,2}
-                    rhz{i, currThresh} = 'include' ;
-                else; rhz{i, currThresh} = 'exclude' ;
+                if vals(i) > params.pipelineQC.linenoise{4}; linenoise{i} = 'include' ;
+                else; linenoise{i} = 'exclude' ;
                 end
             end
         end
-    end
-
-    % DETERMINE INCLUSION ACROSS CRITERIA
-    output = [linenoise, ralldata, rhz, cell(size(resultsTab,1),1)] ;
-    for i=1:size(resultsTab,1)
-        if ismember('exclude', output(i,1:end-1)); output{i,end} = 'exclude' ;
-        else; output{i,end} = 'include' ;
-        end
-    end
-
-    % OUTPUT A .CSV WITH THE INCLUSION/EXCLUSION INFORMATION
-    rhznames = cell(1, size(params.pipelineQC.rhz{3},1)) ;
-    for i=1:size(rhznames,2)
-        rhznames{i} = [strrep(params.pipelineQC.rhz{1}, 'FREQ', ...
-            params.pipelineQC.rhz{1,3}{i,1}) ' > ' ...
-            num2str(params.pipelineQC.rhz{1,3}{i,2})] ;
-    end
-    tabnames = [[strrep(params.pipelineQC.linenoise{1,1}, 'FREQ', ...
-        params.pipelineQC.linenoise{1,3}) ' > ' num2str(params.pipelineQC.linenoise{4})], ...
-        [params.pipelineQC.ralldata{1} ' > ' num2str(params.pipelineQC.ralldata{3})], ...
-        rhznames, 'Across_Criteria'] ;
     
-    savename = ['HAPPE_pipelineQC_inclusion_' datestr(now, 'dd-mm-yyyy') '.csv'] ;
-    indx = 2 ;
-    while isfile(savename)
-        savename = [savename '_' indx] ;
-        indx = indx+1 ;
+        ralldata = cell(size(resultsTab,1),params.pipelineQC.ralldata{1,2}) ;
+        if params.pipelineQC.ralldata{1,2}
+            vals = resultsTab.(params.pipelineQC.ralldata{1}) ;
+            for i=1:size(vals,1)
+                if vals(i) > params.pipelineQC.ralldata{3}; ralldata{i} = 'include' ;
+                else; ralldata{i} = 'exclude' ;
+                end
+            end
+        end
+    
+        rhz = cell(size(resultsTab,1), params.pipelineQC.rhz{2}*size(params.pipelineQC.rhz{3},1)) ;
+        if params.pipelineQC.rhz{2}
+            for currThresh=1:size(params.pipelineQC.rhz{3},1)
+                vals = resultsTab.(strrep(params.pipelineQC.rhz{1}, 'FREQ', ...
+                    params.pipelineQC.rhz{3}{currThresh,1})) ;
+                for i=1:size(vals,1)
+                    if vals(i) > params.pipelineQC.rhz{1,3}{currThresh,2}
+                        rhz{i, currThresh} = 'include' ;
+                    else; rhz{i, currThresh} = 'exclude' ;
+                    end
+                end
+            end
+        end
+    
+        % DETERMINE INCLUSION ACROSS CRITERIA
+        output = [linenoise, ralldata, rhz, cell(size(resultsTab,1),1)] ;
+        for i=1:size(resultsTab,1)
+            if ismember('exclude', output(i,1:end-1)); output{i,end} = 'exclude' ;
+            else; output{i,end} = 'include' ;
+            end
+        end
+    
+        % OUTPUT A .CSV WITH THE INCLUSION/EXCLUSION INFORMATION
+        if params.pipelineQC.linenoise{2}
+            lnnames = [strrep(params.pipelineQC.linenoise{1,1}, 'FREQ', ...
+                params.pipelineQC.linenoise{1,3}) ' > ' ...
+                num2str(params.pipelineQC.linenoise{4})] ;
+        else; lnnames = {} ;
+        end
+        if params.pipelineQC.ralldata{2}
+            rallnames = [params.pipelineQC.ralldata{1} ' > ' ...
+                num2str(params.pipelineQC.ralldata{3})] ;
+        else; rallnames = {} ;
+        end
+        if params.pipelineQC.rhz{2}
+            rhznames = cell(1, size(params.pipelineQC.rhz{3},1)) ;
+            for i=1:size(rhznames,2)
+                rhznames{i} = [strrep(params.pipelineQC.rhz{1}, 'FREQ', ...
+                    params.pipelineQC.rhz{1,3}{i,1}) ' > ' ...
+                    num2str(params.pipelineQC.rhz{1,3}{i,2})] ;
+            end
+        else; rhznames = {} ;
+        end
+        tabnames = [lnnames, rallnames, rhznames, 'Across_Criteria'] ;
+        
+        savename = replace(FileNames{indxPipelineQC(currFile)}, {'.csv','.xlsx'}, '_ParticipantInclusion.csv') ;
+        indx = 2 ;
+        while isfile(savename)
+            savename = strrep(savename, '.csv', ['_' num2str(indx) '.csv']) ;
+            indx = indx+1 ;
+        end
+        writetable(cell2table(output, 'VariableNames', tabnames, 'RowNames', ...
+            table2cell(resultsTab(:,'Row'))), savename, 'WriteRowNames', ...
+            true, 'QuoteStrings', true) ;
+    catch ME
+        fprintf(['Unable to process ' FileNames{indxPipelineQC(currFile)} '\n']) ;
     end
-    writetable(cell2table(output, 'VariableNames', tabnames, 'RowNames', ...
-        table2cell(resultsTab(:,'Row'))), savename, 'WriteRowNames', ...
-        true, 'QuoteStrings', true) ;
 end
 
 %% SUPPORT FUNCTIONS
