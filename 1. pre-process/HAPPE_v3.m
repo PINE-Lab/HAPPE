@@ -104,14 +104,14 @@ addpath([happeDir filesep '1. pre-process'], ...
     [happeDir filesep 'scripts' filesep 'pipeline_steps'], ...
     [happeDir filesep 'scripts' filesep 'ui'], ...
     [happeDir filesep 'scripts' filesep 'support'], ...
-    eeglabDir, [eeglabDir filesep 'functions']) ;
+    [happeDir filesep 'packages'], ...
+    eeglabDir, genpath([eeglabDir filesep 'functions'])) ;
 rmpath(genpath([eeglabDir filesep 'functions' filesep 'octavefunc'])) ;
 
 % ADD EEGLAB PLUGIN FOLDERS TO PATH
 pluginDir = dir([eeglabDir filesep 'plugins']) ;
 pluginDir = strcat(eeglabDir, filesep, 'plugins', filesep, {pluginDir.name}, ';') ;
 addpath([pluginDir{:}]) ;
-clear(pluginDir) ;
 
 % ADD CLEANLINE FOLDERS TO PATH
 if exist('cleanline', 'file')
