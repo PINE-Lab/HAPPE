@@ -1,3 +1,4 @@
+%% generateFuncConn_dwPLI
 % Generate Functional Connectivity - dwPLI - A post-processing script to
 % calculate dwPLI on HAPPE-processed data. Relies on functions from
 % FieldTrip (Oostenveld et al., 2011), which can be found here:
@@ -22,7 +23,7 @@
 %          Lizzie Shepherd, ..., 2022
 %
 % This file is part of HAPPE.
-% Copyright 2018-2022 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
+% Copyright 2018-2023 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
 %
 % HAPPE is free software: you can redistribute it and/or modify it under
 % the terms of the GNU General Public License as published by the Free
@@ -37,27 +38,35 @@
 % You should have received a copy of the GNU General Public License along
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
-%% SET FOLDERS AND PATH
+%% ADD NECESSARY FOLDERS TO THE PATH
 clear ;
-fprintf('Preparing HAPPE generatedwPLI add-on...\n') ;
-happeDir = strrep(fileparts(which(mfilename('fullpath'))), '\add-ons', '') ;
-addpath([happeDir filesep 'scripts'], ...
-    [happeDir filesep 'scripts' filesep 'UI_scripts'], ...
-    [happeDir filesep 'add-ons'], ...
-    [happeDir filesep 'add-ons' filesep 'generate'], ...
-    [happeDir filesep 'add-ons' filesep 'scripts']) ;
+fprintf('Preparing HAPPE generateFuncConn_dwPLI...\n') ;
+happeDir = strrep(fileparts(which(mfilename('fullpath'))), [filesep '3. ' ...
+    'generate'], '') ;
+addpath([happeDir filesep '3. generate'], ...
+    [happeDir filesep 'files'], ...
+    [happeDir filesep 'scripts'], ...
+    [happeDir filesep 'scripts' filesep 'ui'], ...
+    [happeDir filesep 'scripts' filesep 'support']) ;
 
 %% DETERMINE AND SET FIELDTRIP PATH
+% Use input from the Command Window to set the path to the user's
+% installation of FieldTrip. If an invalid path is entered, repeat until a
+% valid folder/path is entered.
 while true
-    fieldTripDir = input('Enter your FieldTrip folder location, including full file path:\n> ','s') ;
+    fieldTripDir = input(['Enter your FieldTrip folder location, ' ...
+        'including full file path:\n> '], 's') ;
     if exist(fieldTripDir, 'dir') == 7; break ;
-    else; disp("Invalid input: please enter the complete path to the folder.") ;
+    else; fprintf(['Invalid input: please enter the complete path to ' ...
+            'the folder.']) ;
     end
 end
 addpath(fieldTripDir) ;
 addpath([fieldTripDir filesep 'external' filesep 'eeglab']) ;
 
-%% DETERMINE AND SET PATH TO THE DATA
+%% DETERMINE AND SET PATH TO DATA
+% Use input from the Command Window to set the path to the data. If an 
+% invalid path is entered, repeat until a valid path is entered.
 while true
     srcDir = input('Enter the path to the folder containing the processed dataset(s):\n> ','s') ;
     if exist(srcDir, 'dir') == 7; break ;
@@ -67,18 +76,26 @@ end
 cd(srcDir) ;
 
 %% DETERMINE OUTPUT FORMAT
+% Prompt the user about whether to export the results of this script as a
+% single Excel (Microsoft Office) file with multiple sheets or as multiple
+% .csv files.
 fprintf(['Choose your export format:\n  sheets = A single Excel file' ...
     ' with multiple sheets\n  files = Multiple .csv files\n']) ;
 exportCSV = choose2('sheets', 'files') ;
 
-%% DEFINE BANDS
+%% DEFINE FREQUENCY BANDS
+% Define the frequency bands to be used and ask whether to additionally
+% calculate dwPLI across all included frequencies.
 [customBands, bands] = setFreqBands() ;
-
 fprintf('Calculate dwPLI across all frequencies? [Y/N]\n') ;
 calcAll = choose2('N', 'Y') ;
 if calcAll; bands = [bands; {'All', NaN, NaN}] ; end
 
-%% SUBSET
+%% DEFINE ELECTRODE SUBSETS (OPTIONAL)
+% Ask the user whether they would like to perform analyses between sets of
+% electrodes. If so, collect the subsets in pairs by entering each subset 
+% as a series of individually entered electrodes. Repear until all desired
+% subsets have been entered.
 fprintf('Perform analyses between subsets of electrodes? [Y/N]\n') ;
 compSubset = choose2('N','Y') ;
 if compSubset
@@ -101,22 +118,25 @@ if compSubset
     end  
 end
 
-%% CREATE OUTPUT FOLDERS
-% Create the folders in which to store outputs
-fprintf('Creating output folder...\n') ;
-if ~isfolder([srcDir filesep 'generate_dwPLI'])
-    mkdir([srcDir filesep 'generate_dwPLI']) ;
+%% CREATE OUTPUTS FOLDER
+% Create the folder to store the outputs of this script.
+fprintf('Creating outputs folder...\n') ;
+if ~isfolder([srcDir filesep 'generateFuncConn_dwPLI'])
+    mkdir([srcDir filesep 'generateFuncConn_dwPLI']) ;
 end
 addpath('generate_dwPLI') ;
-fprintf('Output folder created.\n') ;
+fprintf('Outputs folder created.\n') ;
 
 %% COLLECT FILES
+% Locates all .set files that meet the naming criteria specified by the
+% user. If no files meeting this criteria are found, throw an error and end
+% the run.
 fprintf(['Enter any text, including spaces, between "processed" and ".set"' ...
     ' (if applicable).\nIf no text exists press enter/return.\nExample: ' ...
     'For "##_processed_rerun-2022.set", enter "_rerun-2022" (without quotations).\n']) ;
 suffix = input('> ', 's') ;
 FileNames = {dir(['*_processed' suffix '.set']).name} ;
-if size(FileNames,2) < 1; error('ERROR: No files detected') ; end
+if size(FileNames,2) < 1; error('ERROR: NO FILES DETECTED.') ; end
 
 %% INITIALIZE VARIABLES
 FC_mat = cell(size(FileNames,2), size(bands,1)) ; % Functional Connectivity Output Matrix

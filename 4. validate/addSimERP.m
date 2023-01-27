@@ -28,6 +28,21 @@
 %% CLEAR THE WORKSPACE
 clear ;
 
+%% ADD NECESSARY FOLDERS TO THE PATH
+clear ;
+fprintf('Preparing HAPPE''s addSimERP script...\n') ;
+happeDir = strrep(fileparts(which(mfilename('fullpath'))), [filesep '4. ' ...
+    'validate'], '') ;
+eeglabDir = [happeDir filesep 'packages' filesep 'eeglab2022.0'] ;
+addpath([happeDir filesep '4. validate'], ...
+    [happeDir filesep 'files'], ...
+    [happeDir filesep 'files' filesep 'ERPs'], ...
+    [happeDir filesep 'scripts'], ...
+    [happeDir filesep 'scripts' filesep 'ui'], ...
+    [happeDir filesep 'scripts' filesep 'support'], ...
+    eeglabDir, [eeglabDir filesep 'functions']) ;
+rmpath(genpath([eeglabDir filesep 'functions' filesep 'octavefunc'])) ;
+
 %% DETERMINE AND SET PATH TO DATA
 % Use input from the command line to set the path to the data. If an 
 % invalid path is entered, repeat until a valid path is entered.
@@ -54,7 +69,6 @@ while true
             sprintf('%s, ', suppERPs{1:end-1}), suppERPs{end} '.\n']) ;
     end
 end
-% selERP = 'VEP' ;
 
 %% CREATE OUTPUT FOLDERS
 % Create the folder in which to store final outputs.
@@ -65,11 +79,10 @@ if ~isfolder([srcDir filesep '+' selERP])
 else; fprintf(['Output folder "+' selERP '" already exists.\n']) ;
 end
 
-%% LOAD ERP AND EVENT FILES
-fprintf('Loading ERP...\n') ;
-scriptDir = fileparts(which(mfilename('fullpath'))) ;
-load([scriptDir filesep 'etc' filesep selERP '_ts.mat']) ;
-load([scriptDir filesep 'etc' filesep selERP '_events.mat']) ;
+%% LOAD ERP TIMESERIES AND EVENT FILES
+fprintf('Loading ERP timeseries and events...\n') ;
+load([happeDir filesep 'files' filesep 'ERPs' filesep selERP '_ts.mat']) ;
+load([happeDir filesep 'files' filesep 'ERPs' filesep selERP '_events.mat']) ;
 
 cd(srcDir) ;
 FileNames = {dir('*.set').name} ;

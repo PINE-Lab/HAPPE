@@ -299,30 +299,30 @@ while true
     end
 
     %% ECGONE
-    if (~preExist || strcmpi(paramChoice, 'ECGone')) && ~reprocessing
-        fprintf('Use ECGone to reduce ECG artifact in your data? [Y/N]\n') ;
-        params.ecgone.on = choose2('N', 'Y') ;
-        if params.ecgone.on
-            fprintf(['Does your data contain a dedicated ECG channel? [Y/N]' ...
-                '\n']) ;
-            params.ecgone.ECGchan.inc = choose2('N', 'Y') ;
-            if params.ecgone.ECGchan.inc
-                fprintf('Dedicated ECG channel name:\n') ;
-                params.ecgone.ECGchan.ID = input('> ', 's') ;
-            else
-                fprintf(['Enter the channel names containing ECG artifact' ...
-                    ' to create a proxy:\nPress enter/return between each' ...
-                    ' entry.\nExample: E17\nWhen you have entered all ' ...
-                    'channels, input "done" (without quotations).\n']) ;
-                params.ecgone.ECGchan.ID = unique(UI_cellArray(1, {}), 'stable') ;
-            end
-            fprintf('Window creation length in MILLISECONDS for peak detection:\n') ;
-            params.ecgone.peakWinSize = input('> ')/1000 ;
-%             fprintf('Template window creation length in SECONDS:\n') ;
-%             params.ecgone.procEpoch = input('> ') ;
-            params.ecgone.procEpoch = 30 ;
-        end
-    end
+%     if (~preExist || strcmpi(paramChoice, 'ECGone')) && ~reprocessing
+%         fprintf('Use ECGone to reduce ECG artifact in your data? [Y/N]\n') ;
+%         params.ecgone.on = choose2('N', 'Y') ;
+%         if params.ecgone.on
+%             fprintf(['Does your data contain a dedicated ECG channel? [Y/N]' ...
+%                 '\n']) ;
+%             params.ecgone.ECGchan.inc = choose2('N', 'Y') ;
+%             if params.ecgone.ECGchan.inc
+%                 fprintf('Dedicated ECG channel name:\n') ;
+%                 params.ecgone.ECGchan.ID = input('> ', 's') ;
+%             else
+%                 fprintf(['Enter the channel names containing ECG artifact' ...
+%                     ' to create a proxy:\nPress enter/return between each' ...
+%                     ' entry.\nExample: E17\nWhen you have entered all ' ...
+%                     'channels, input "done" (without quotations).\n']) ;
+%                 params.ecgone.ECGchan.ID = unique(UI_cellArray(1, {}), 'stable') ;
+%             end
+%             fprintf('Window creation length in MILLISECONDS for peak detection:\n') ;
+%             params.ecgone.peakWinSize = input('> ')/1000 ;
+% %             fprintf('Template window creation length in SECONDS:\n') ;
+% %             params.ecgone.procEpoch = input('> ') ;
+%             params.ecgone.procEpoch = 30 ;
+%         end
+%     end
 
     %% WAVELET METHODOLOGY
     if (~preExist || strcmpi(paramChoice, 'wavelet thresholding')) && ~reprocessing

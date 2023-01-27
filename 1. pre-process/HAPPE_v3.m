@@ -79,8 +79,8 @@
 % ADVANCED KNOWLEDGE OF BOTH MATLAB CODING AND SIGNAL PROCESSING.
 %
 % If you do not have knowledge of both MATLAB coding and signal processing,
-% instead interface with this script by running it and entering your parameters in
-% the command window as detailed in the HAPPE User Guide.
+% instead interface with this script by running it and entering your 
+% parameters in the command window as detailed in the HAPPE User Guide.
 %
 % If you edit the code we CANNOT GUARANTEE the code will function as
 % intended and may negatively affect HAPPE's performance.
@@ -89,24 +89,29 @@
 %% CLEAR THE WORKSPACE
 clear ;
 
-%% SET FOLDERS FOR HAPPE AND EEGLAB PATHS
+%% SET PATH TO INCLUDE NECESSARY FOLDERS
 fprintf('Preparing HAPPE...\n') ;
 % SET HAPPE AND EEGLAB PATHS USING THE RUNNING SCRIPT
-happeDir = fileparts(which(mfilename('fullpath'))) ;
-eeglabDir = [happeDir filesep 'Packages' filesep 'eeglab2022.0'] ;
+happeDir = strrep(fileparts(which(mfilename('fullpath'))), [filesep '1. ' ...
+    'pre-process'], '') ;
+eeglabDir = [happeDir filesep 'packages' filesep 'eeglab2022.0'] ;
 
 % ADD HAPPE AND REQUIRED FOLDERS TO PATH
-addpath([happeDir filesep 'acquisition_layout_information'], ...
+addpath([happeDir filesep '1. pre-process'], ...
+    [happeDir filesep 'files'], ...
+    [happeDir filesep 'files' filesep 'acquisition_layout_information'], ...
     [happeDir filesep 'scripts'], ...
-    [happeDir filesep 'scripts' filesep 'UI_scripts'], ...
-    [happeDir filesep 'scripts' filesep 'pipeline_scripts'], ...
-    eeglabDir, genpath([eeglabDir filesep 'functions'])) ;
+    [happeDir filesep 'scripts' filesep 'pipeline_steps'], ...
+    [happeDir filesep 'scripts' filesep 'ui'], ...
+    [happeDir filesep 'scripts' filesep 'support'], ...
+    eeglabDir, [eeglabDir filesep 'functions']) ;
 rmpath(genpath([eeglabDir filesep 'functions' filesep 'octavefunc'])) ;
 
-% ADD EEGLAB FOLDERS TO PATH
+% ADD EEGLAB PLUGIN FOLDERS TO PATH
 pluginDir = dir([eeglabDir filesep 'plugins']) ;
 pluginDir = strcat(eeglabDir, filesep, 'plugins', filesep, {pluginDir.name}, ';') ;
 addpath([pluginDir{:}]) ;
+clear(pluginDir) ;
 
 % ADD CLEANLINE FOLDERS TO PATH
 if exist('cleanline', 'file')
@@ -117,7 +122,7 @@ else; error('Please make sure cleanline is on your path') ;
 end
 
 %% DETERMINE AND SET PATH TO DATA
-% Use input from the command line to set the path to the data. If an 
+% Use input from the Command Window to set the path to the data. If an 
 % invalid path is entered, repeat until a valid path is entered.
 while true
     srcDir = input('Enter the path to the folder containing the dataset(s):\n> ','s') ;
@@ -132,15 +137,18 @@ cd (srcDir) ;
 [reprocess, ranMuscIL, rerunExt] = isReprocessed() ;
 
 %% DETERMINE IF USING PRESET PARAMETERS
-ver = '3_2_0' ;
+ver = '3_3_0' ;
 [preExist, params, changeParams] = isPreExist(reprocess, ver) ;
 
 %% SET PARAMETERS
 params = setParams(params, preExist, reprocess, changeParams, happeDir) ;
 
 %% SAVE INPUT PARAMETERS
-% If created new or changed parameter set, save as a new .mat file to a new
-% folder (input_parameters) added to the source folder.
+% If the parameter set was newly created or if a loaded parameter set was
+% changed, save the new parameter set as a .mat file. Prompt to use the
+% default or a custom name for this saved file. If the file already exists,
+% ask to create a new file with a different name or overwrite the existing
+% file.
 if ~preExist || changeParams
     % CREATE "input_parameters" FOLDER AND ADD IT TO PATH, unless it
     % already exists.
@@ -168,8 +176,7 @@ if ~preExist || changeParams
     % SAVE PARAMETERS: Save the params variable to a .mat file using the
     % name created above.
     params.HAPPEver = ver ;
-    fprintf('Saving parameters...') ;
-    save(paramFile, 'params') ;
+    fprintf('Saving parameters...') ; save(paramFile, 'params') ;
     fprintf('Parameters saved.') ;
 end
 
@@ -184,6 +191,11 @@ allDirNames = {'intermediate_processing', 'wavelet_cleaned_continuous', ...
 if ~params.paradigm.ERP.on; allDirNames(ismember(allDirNames, 'ERP_filtered')) = []; end
 if ~params.muscIL; allDirNames(ismember(allDirNames, 'muscIL')) = []; end
 dirNames = cell(1,size(allDirNames,2)) ;
+
+% If reprocessing with a set of steps that has a different number of
+% folders than the original run, adapt the folder structure to reflect the
+% new set of folders. For example, if reprocessing with muscIL, add a
+% 'muscIL' folder.
 if reprocess
     currDirNames = dir(srcDir) ;
     currDirNames = {currDirNames([dir(srcDir).isdir]).name} ;
@@ -233,8 +245,10 @@ elseif params.loadInfo.inputFormat == 6; inputExt = '.EDF' ;
 elseif params.loadInfo.inputFormat == 7; inputExt = '.set' ;
 end
 % COLLECT FILE NAMES: gather the names of all the files with the relevant
-% file extension in the directory indicated by the user.
+% file extension in the directory indicated by the user. If no files are
+% found, end the run via error.
 FileNames = {dir(['*' inputExt]).name} ;
+if isempty(FileNames); error(['ERROR: No ' inputExt ' files detected!']) ; end
 % LOCATE STIM FILE AND NAMES
 if params.loadInfo.inputFormat == 1 && params.paradigm.task
     % ***
@@ -531,19 +545,16 @@ for currFile = 1:length(FileNames)
             end
 
             %% FILTER AND SAVE INTERMEDIATE FILE
-            % Filter the EEG data. For ERP paradigms, only use a 100 Hz
-            % bandpass. For all other paradigms, filter the data using both
-            % a 1 Hz highpass and a 100 Hz lowpass.
+            % If not an ERP paradigm, filter the data using user-specified
+            % high- and low-passes. Save the filtered dataset to the
+            % intermediate_processing folder.
             if ~params.paradigm.ERP.on && params.filt.on
                 EEG = pop_eegfiltnew(EEG, params.filt.highpass, ...
                     params.filt.lowpass, [], 0, [], 0) ;
                 EEG.setname = [EEG.setname '_filt'] ;
-                % Save the filtered dataset to the intermediate_processing
-                % folder
                 pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
                     inputExt, '_filtered.set')) ;
             end
-            
             
             %% DETECT BAD CHANNELS
             % If bad channel detection is on, detect and reject bad
@@ -598,7 +609,7 @@ for currFile = 1:length(FileNames)
                 % dataset.
                 EEGloaded = pop_loadset('filename', ...
                     strrep(FileNames{currFile}, inputExt, ...
-                    '_filtered_lnreduced.set'), 'filepath', [srcDir filesep ...
+                    '_lnreduced.set'), 'filepath', [srcDir filesep ...
                     dirNames{contains(dirNames, 'intermediate_processing')}]) ;
                 dataQC{currFile, 2} = size(EEGloaded.data,1) ;
                 origChans = EEGloaded.chanlocs ;
@@ -782,7 +793,7 @@ for currFile = 1:length(FileNames)
         % interpolated channels, if any, to the dataquality metrics.
         if params.segment.interp
             try [EEG, dataQC] = happe_interpChanBySeg(EEG, dataQC, ...
-                    currFile) ;
+                    currFile, params) ;
 
                 % SAVE INTERPOLATED DATA AS INTERMEDIATE FILE
                 pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, inputExt, ...

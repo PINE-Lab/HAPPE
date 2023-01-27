@@ -1,4 +1,29 @@
-%% SET FOLDERS AND PATH
+%% checkCriteria_ParticipantInclusion 
+% A post-processing script to determine which participants meet a set of
+% user-defined criteria based on HAPPE's quality assessment outputs.
+%
+% Developed at Northeastern University's PINE Lab
+%
+% Author: A.D. Monachino, PINE Lab at Northeastern University, 2023
+%
+% This file is part of HAPPE.
+% Copyright 2018-2023 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
+%
+% HAPPE is free software: you can redistribute it and/or modify it under
+% the terms of the GNU General Public License as published by the Free
+% Software Foundation, either version 3 of the License, or (at your option)
+% any later version.
+% 
+% HAPPE is distributed in the hope that it will be useful, but WITHOUT ANY
+% WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+% FOR A PARTICULAR PURPOSE. See the GNU General Public License for more 
+% details.
+% 
+% You should have received a copy of the GNU General Public License along
+% with HAPPE. If not, see <https://www.gnu.org/licenses/>.
+%-------------------------------------------------------------------------%
+
+%% ADD NECESSARY FOLDERS TO THE PATH
 clear ;
 fprintf('Preparing HAPPE CheckCriteria_ParticipantInclusion add-on...\n') ;
 happeDir = strrep(fileparts(which(mfilename('fullpath'))), '\add-ons', '') ;
@@ -9,7 +34,7 @@ addpath([happeDir filesep 'scripts'], ...
     [happeDir filesep 'add-ons' filesep 'scripts']) ;
 
 %% DETERMINE AND SET PATH TO DATA
-% Use input from the command line to set the path to the data. If an 
+% Use input from the Command Window to set the path to the data. If an 
 % invalid path is entered, repeat until a valid path is entered.
 while true
     srcDir = input('Enter the path to the folder containing the dataset(s):\n> ','s') ;
@@ -21,6 +46,10 @@ end
 cd (srcDir) ;
 
 %% COLLECT FILES TO RUN
+% Locates all .csv and .xlsx files with 'dataQC' and 'pipelineQC' included
+% in the filename. Assigns the index of each file to a list specifying
+% whether the file is dataQC or pipelineQC. If no files meeting this
+% criteria are found, throw an error and end the run.
 fprintf('Gathering files...\n') ;
 FileNames = [{dir('*.csv').name} {dir('*.xlsx').name}] ;
 indxDataQC = [];
@@ -37,12 +66,11 @@ end
 %% DETERMINE IF LOADING PARAMETERS
 fprintf('Load a pre-existing set of parameters? [Y/N]\n') ;
 preExist = choose2('N','Y') ;
+% If indicated by the user, use Command Window input to collect and load
+% the file of pre-existing parameters. If the entered file does not exist,
+% repeat until an existing file is entered.
 if preExist
-    % Ask user for file
     while true
-        % Use command window user input to collect the file name of the
-        % pre-existing parameters. If the entered file is not an existing
-        % file, repeats until a valid input is entered.
         fprintf(['Enter your parameter file, including the full path ' ...
             'and file extension:\n']) ;
         paramFile = input('> ', 's') ;
@@ -50,15 +78,20 @@ if preExist
         else; fprintf('Invalid input: please enter the correct file\n') ;
         end
     end
-    % Load file
     fprintf('Loading parameters...\n') ;
     load(paramFile) ;
     fprintf('Parameters loaded.\n') ;
-    % List parameters
-    genInc_listParams(params) ;
-    % Ask if want to change parameters
+    % List the loaded parameters for user review and ask if they should be
+    % changed. If the parameter set cannot be loaded, inform the user that
+    % their parameter set is invalid.
+    try checkInc_listParams(params) ;
+    catch ME
+        error('ERROR: This is not a valid set of parameters for this script\n') ;
+    end
     fprintf('Change an existing parameter? [Y/N]\n') ;
     changedParams = choose2('n', 'y') ;
+% If no existing parameters are loaded, create a set of default parameters
+% to be edited/filled out during the Set Parameters step below.
 else
     changedParams = 0 ;
     params.dataQC.single = {'Percent_Good_Chans_Selected', 0, NaN, ''; ...
@@ -68,21 +101,23 @@ else
     params.dataQC.multiple = {'Number_TAG_Segs_Post-Seg_Rej', 0, {}; ...
         'Number_CONDITION_Segs_Post-Seg_Rej', 0, {}} ;
     params.dataQC.badChanROIs = {0, {NaN, NaN, NaN}} ;
-    params.pipelineQC.linenoise = {'r FREQ hz pre/post linenoise reduction', 0, NaN, NaN} ;
+    params.pipelineQC.linenoise = {'r FREQ hz pre/post linenoise reduction', ...
+        0, NaN, NaN} ;
     params.pipelineQC.ralldata = {'r alldata post/pre waveleting', 0, NaN} ;
     params.pipelineQC.rhz = {'r FREQ hz post/pre waveleting', 0, ...
         {'0.5', NaN; '1', NaN; '2', NaN; '5', NaN; '8', NaN; '12', NaN; ...
         '20', NaN; '30', NaN; '45', NaN; '70', NaN}} ;
 end
 
-%-------------------------------------------------------------------------%
 %% SET PARAMETERS
 while true
     userChoice = '' ;
-    %% BREAK IF NOT CHANGING EXISTING PARAMETERS
+    % BREAK IF NOT CHANGING EXISTING PARAMETERS
     if preExist && ~changedParams; break; end
 
-    %% IF CHANGING EXISTING PARAMETERS:
+    % IF CHANGING EXISTING PARAMETERS...
+    % list out the potential options that can be changed by the user, and
+    % collect user input on which parameter to choose.
     if changedParams
         fprintf(['Parameter to change: Percent_Good_Chans_Selected,' ...
             ' Percent_Var_Retained_Post-Wav,\nPercent_ICs_Rej, ' ...
@@ -93,9 +128,13 @@ while true
         userChoice = input('> ', 's') ;
     end
 
-    %% DATA QC THRESHOLDS:
-    % PERCENT GOOD CHANNELS, PERCENT VARIANCE POSTWAV, PERCENT ICS
-    % REJECTED, NUMBER OF SEGMENTS RETAINED TOTAL%
+    % DATA QC THRESHOLDS
+    % Percent Good Channels, Percent Variance PostWav, Percent ICs
+    % Rejected, and Number of Segments Retained (irrespective of
+    % tag/condition): Loop through each of these options, and query the
+    % user whether to use it as criteria. If selected as criteria, indicate
+    % whether the threshold should be a minimum or a maximum and set the
+    % threshold according to user input.
     if ~preExist || any(ismember(params.dataQC.single(:,1), userChoice))
         for i=1:size(params.dataQC.single(:,1),1)
             if isempty(userChoice) || strcmpi(params.dataQC.single{i,1}, userChoice)
@@ -123,8 +162,12 @@ while true
         end
     end
 
-    % NUMBER OF SEGMENTS RETAINED BY ONSET TAG, NUMBER OF SEGMENTS RETAINED
-    % BY CONDITION
+    % Number of Segments Retained By Onset Tag, and Number of Segments
+    % Retained by Condition: For each option, ask whether to use it as
+    % criteria for inclusion. If selected, collect the minimum number of
+    % segments needed and the onset tag for each tag/condition. If an
+    % invalid format for entering this information is used, prompt the user
+    % to re-enter in the correct format.
     if ~preExist || any(ismember(params.dataQC.multiple(:,1), userChoice))
         for i=1:size(params.dataQC.multiple(:,1),1)
             if isempty(userChoice) || strcmpi(params.dataQC.multiple{i,1}, userChoice)
@@ -156,8 +199,11 @@ while true
         end
     end
 
-    % REGIONS OF INTEREST Regions of interest and the max allowed to be missing per region. Can be
-    % a single electrode
+    % Regions of Interest/Bad Channel IDs: Ask the user whether or not to
+    % use bad channel IDs as criteria. If selected, collect each set of
+    % channels per region via the Command Window, and the maximum number
+    % that can be labeled bad before rejection. Repeat for each region of
+    % interest. A region of interest can be a single electrode.
     if ~preExist || strcmpi('Bad Channel IDs', userChoice)
         fprintf('Use bad channel IDs as inclusion criteria? [Y/N]\n') ;
         params.dataQC.badChanROIs{1} = choose2('N', 'Y') ;
@@ -167,7 +213,10 @@ while true
                 fprintf(['Enter the channel(s) to be used to assess ' ...
                     'inclusion, one at a time,\npressing enter/return' ...
                     ' after each entry. When you have finished\nentering ' ...
-                    'all channels, input "done" (without quotations).\n']) ;
+                    'all channels, input "done" (without quotations).\n' ...
+                    'Example: Enter 3 if 4 or more out of 5 channels' ...
+                    ' are marked "bad".\nFor single electrode ROIs, ' ...
+                    'enter 0.\n']) ;
                 params.dataQC.badChanROIs{2}{indx,1} = UI_cellArray(1, {}) ;
                 params.dataQC.badChanROIs{2}{indx,2} = input(['Enter the ' ...
                     'maximum number of these channels that can be labeled ' ...
@@ -182,8 +231,10 @@ while true
     else; params.dataQC.badChanROIs{2} = {} ;
     end
     
-    %% PIPELINE QC THRESHOLDS:
-    % PRIMARY LINE-NOISE FREQUENCY
+    % PIPELINE QC THRESHOLDS
+    % Primary Line-Noise Frequency: Ask if using the primary line-noise
+    % frequency as criteria for inclusion. If so, collect the line-noise
+    % frequency and minimum threshold for inclusion.
     if ~preExist || strcmpi('line noise frequency', userChoice)
         fprintf(['Use r pre/post linenoise reduction as exclusion ' ...
             'criteria? [Y/N]\n']) ;
@@ -196,7 +247,8 @@ while true
         end
     end
 
-    % R ALLDATA
+    % R AllData: Ask if using r alldata as criteria for inclusion. If so,
+    % collect the minimum threshold for inclusion.
     if ~preExist || strcmpi('r alldata', userChoice)
         fprintf(['Use r alldata post/pre waveleting as exclusion ' ...
             'criteria? [Y/N]\n'])
@@ -207,15 +259,17 @@ while true
         end
     end
 
-    % R FOR SPECIFIED FREQUENCIES
+    % R For Specified Frequencies: Ask if using any of the other r values
+    % for various frequencies as criteria for inclusion. If so, ask whether
+    % to use all the possible frequencies in the QC sheet or a subset. If
+    % using a subset, collect the frequencies of interest. Ask whether to
+    % use the same threshold value for all frequencies. If not, collect the
+    % minimum threshold value for each frequency.
     if ~preExist || strcmpi('r post/pre waveleting by frequency', userChoice)
-        % Determine if using this criteria
         fprintf(['Use r pre/post waveleting by frequency as exclusion ' ...
             'criteria? [Y/N]\n']) ;
         params.pipelineQC.rhz{1,2} = choose2('N','Y') ;
         if params.pipelineQC.rhz{1,2}
-            % Choose custom set or all. If custom, enter the list of
-            % frequencies.
             fprintf(['Use all included frequencies or a subset?\n  all = Use' ...
                 ' all frequencies included in the QC sheet.\n  subset = Use ' ...
                 'a subset of frequencies included in the QC sheet.\n']) ;
@@ -234,7 +288,6 @@ while true
                 end
                 params.pipelineQC.rhz{1,3} = [freqs' cell(size(freqs,2),1)] ;
             end
-            % Use multiple values or a single cutoff value?
             fprintf(['Use a single value for exclusion for all frequencies or ' ...
                 'specify by frequency?\n  single = Use a single ' ...
                 ' value for every frequency\n  specify = Choose a value' ...
@@ -255,10 +308,13 @@ while true
         end
     end
 
-    %% CONFIRM PARAMETERS:
+    % CONFIRM PARAMETERS
+    % List the set parameters and confirm their accuracy via the Command
+    % Window and user input. If correct, break the loop. Otherwise, enable
+    % the user to change their parameters.
     if ~preExist || strcmpi('done', userChoice)
        fprintf('Please check your parameters before continuing.\n') ;
-       genInc_listParams(params) ;
+       checkInc_listParams(params) ;
        fprintf('Are the above parameters correct? [Y/N]\n') ;
        if choose2('n','y'); break ;
        elseif ~preExist
@@ -267,38 +323,44 @@ while true
        end
    end
 end
-%-------------------------------------------------------------------------%
+
 %% SAVE PARAMETERS
+% If the parameter set was newly created or if a loaded parameter set was
+% changed, save the new parameter set as a .mat file. Prompt to use the
+% default or a custom name for this saved file. If the file already exists,
+% ask to create a new file with a different name or overwrite the existing
+% file.
 if ~preExist || changedParams
-    % DETERMINE PARAMETER FILE NAME: Prompt to use a default or custom name
-    % for parameter file. If file exists, ask to create new file with a 
-    % different name or overwrite existing file.
     fprintf(['Parameter file save name:\n  default = Default name (input' ...
         'genInc_parameters_dd-mm-yyyy.mat).\n  custom = Create a custom file name' ...
         '\n']) ;
     if choose2('custom', 'default')
-        paramFile = paramFile_validateExist(['genInc_parameters_' ...
-            datestr(now, 'dd-mm-yyyy') '.mat'], 'genInc_parameters_', 2) ;
+        paramFile = paramFile_validateExist(['checkPartInc_parameters_' ...
+            datestr(now, 'dd-mm-yyyy') '.mat'], 'checkPartInc_parameters_', 2) ;
     else
         fprintf('File name (Do not include .mat):\n') ;
         paramFile = paramFile_validateExist([input('> ', 's') '.mat'], ...
             'inputParameters_', 0) ;
     end
-
-    % SAVE PARAMETERS: Save the params variable to a .mat file using the
-    % name created above.
-    fprintf('Saving parameters...') ;
-    save(paramFile, 'params') ;
+    fprintf('Saving parameters...') ; save(paramFile, 'params') ;
     fprintf('Parameters saved.') ;
 end
 
 
-%% RUN ON DATAQC FILES
+%% RUN DATAQC FILES
+% For each dataQC file, determine whether participants meet the criteria
+% for inclusion. If unable to process the file, continue to the next file.
 for currFile = 1:size(indxDataQC,2)
     try
-        resultsTab = readtable(FileNames{indxDataQC(currFile)}, 'PreserveVariableNames', true) ;
+        % READ IN THE TABLE FROM THE FILE
+        resultsTab = readtable(FileNames{indxDataQC(currFile)}, ...
+            'PreserveVariableNames', true) ;
+
         % DETERMINE INCLUSION BY PERCENT GOOD CHANNELS, PERCENT VARIANCE,
-        % PERCENT ICS REJECTED, AND NUMBER OF SEGMENTS POST-REJECTION
+        % PERCENT ICS REJECTED, AND NUMBER OF SEGMENTS POST-REJECTION:
+        % Loop through these options, keeping a seperate index of which
+        % column in the output table to use (avoids empty rows in the
+        % array).
         singles = cell(size(resultsTab,1), sum(cell2mat(params.dataQC.single(:,2)))) ;
         indx = 1;
         for currThresh=1:size(params.dataQC.single(:,1),1)
@@ -365,6 +427,8 @@ for currFile = 1:size(indxDataQC,2)
         end
     
         % DETERMINE INCLUSION ACROSS CRITERIA
+        % Indicate if any of the inclusion criteria were not met for a
+        % participant.
         output = [singles, tags, conds, badChans, cell(size(resultsTab,1),1)] ;
         for i=1:size(resultsTab,1)
             if ismember('exclude', output(i,1:end-1)); output{i,end} = 'exclude' ;
@@ -372,7 +436,7 @@ for currFile = 1:size(indxDataQC,2)
             end
         end
     
-        % OUTPUT A .CSV WITH THE INCLUSION/EXCLUSION INFORMATION
+        % CREATE VARIABLE NAMES FOR EACH CRITERIA
         singlenames = cell(1,size(singles,2)) ;
         indx = 1;
         for i=1:size(params.dataQC.single,1)
@@ -407,8 +471,11 @@ for currFile = 1:size(indxDataQC,2)
                         num2str(params.dataQC.badChanROIs{1,2}{i,2})] ;
                 end
         end
+        
+        % COMPILE THE TABLE OF ALL CRITERIA AND NAMES, SAVING IT TO A .CSV
         tabnames = [singlenames, tagnames, condnames, roinames, 'Across_Criteria'] ;
-        savename = replace(FileNames{indxDataQC(currFile)}, {'.csv','.xlsx'}, '_ParticipantInclusion.csv') ;
+        savename = replace(FileNames{indxDataQC(currFile)}, ...
+            {'.csv','.xlsx'}, '_ParticipantInclusion.csv') ;
         indx = 2 ;
         while isfile(savename)
             savename = strrep(savename, '.csv', ['_' num2str(indx) '.csv']) ;
@@ -425,9 +492,11 @@ end
 %% RUN ON PIPELINEQC FILES
 for currFile = 1:size(indxPipelineQC,2)
     try
+        % READ IN THE TABLE FROM THE FILE
         resultsTab = readtable(FileNames{indxPipelineQC(currFile)}, ...
             'PreserveVariableNames', true) ;
     
+        % DETERMINE INCLUSION USING LINE NOISE PRE/POST REDUCTION
         linenoise = cell(size(resultsTab,1),params.pipelineQC.linenoise{1,2}) ;
         if params.pipelineQC.linenoise{1,2}
             vals = resultsTab.(strrep(params.pipelineQC.linenoise{1}, 'FREQ', ...
@@ -439,6 +508,8 @@ for currFile = 1:size(indxPipelineQC,2)
             end
         end
     
+        % DETERMINE INCLUSION USING R ALL DATA PRE/POST WAVELET
+        % THRESHOLDING
         ralldata = cell(size(resultsTab,1),params.pipelineQC.ralldata{1,2}) ;
         if params.pipelineQC.ralldata{1,2}
             vals = resultsTab.(params.pipelineQC.ralldata{1}) ;
@@ -449,6 +520,8 @@ for currFile = 1:size(indxPipelineQC,2)
             end
         end
     
+        % DETERMINE INCLUSION USING R AT SPECIFIC FREQUENCIES PRE/POST
+        % WAVELET THRESHOLDING
         rhz = cell(size(resultsTab,1), params.pipelineQC.rhz{2}*size(params.pipelineQC.rhz{3},1)) ;
         if params.pipelineQC.rhz{2}
             for currThresh=1:size(params.pipelineQC.rhz{3},1)
@@ -464,6 +537,8 @@ for currFile = 1:size(indxPipelineQC,2)
         end
     
         % DETERMINE INCLUSION ACROSS CRITERIA
+        % Indicate if any of the inclusion criteria were not met for a
+        % participant.
         output = [linenoise, ralldata, rhz, cell(size(resultsTab,1),1)] ;
         for i=1:size(resultsTab,1)
             if ismember('exclude', output(i,1:end-1)); output{i,end} = 'exclude' ;
@@ -471,7 +546,7 @@ for currFile = 1:size(indxPipelineQC,2)
             end
         end
     
-        % OUTPUT A .CSV WITH THE INCLUSION/EXCLUSION INFORMATION
+        % CREATE VARIABLE NAMES FOR THE THRESHOLD CRITERIA
         if params.pipelineQC.linenoise{2}
             lnnames = [strrep(params.pipelineQC.linenoise{1,1}, 'FREQ', ...
                 params.pipelineQC.linenoise{1,3}) ' > ' ...
@@ -494,6 +569,7 @@ for currFile = 1:size(indxPipelineQC,2)
         end
         tabnames = [lnnames, rallnames, rhznames, 'Across_Criteria'] ;
         
+        % COMPILE THE TABLE OF ALL CRITERIA AND NAMES, SAVING IT TO A .CSV
         savename = replace(FileNames{indxPipelineQC(currFile)}, {'.csv','.xlsx'}, '_ParticipantInclusion.csv') ;
         indx = 2 ;
         while isfile(savename)
@@ -509,7 +585,9 @@ for currFile = 1:size(indxPipelineQC,2)
 end
 
 %% SUPPORT FUNCTIONS
-function genInc_listParams(params)
+% checkInc_ListParams: List the parameters for
+% checkCriteria_ParticipantInclusion in the Command Window.
+function checkInc_listParams(params)
     for i=1:size(params.dataQC.single,1)
         fprintf([params.dataQC.single{i,1} ': ']) ;
         if params.dataQC.single{i,2}

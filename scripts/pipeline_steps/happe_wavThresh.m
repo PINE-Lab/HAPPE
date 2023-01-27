@@ -45,7 +45,8 @@
 function [EEG, wavMeans, dataQC] = happe_wavThresh(EEG, params, wavMeans, ...
     dataQC, currFile) 
 disp('Wavelet thresholding...') ;
-% LEGACY WAVELET - NOT RECOMMENDED
+
+%% LEGACY WAVELET - NOT RECOMMENDED
 % Kept from HAPPEv1 so comparison/unfinished analyses can be run without 
 % needing to switch versions. ICA for clustering data. Uses a soft, global 
 % threshold for the wavelets. The wavelet family is coiflet (level 5). 
@@ -68,22 +69,29 @@ if params.wavelet.legacy
     end
     artifacts = A * wIC ;
 
-% DEFAULT WAVELET:
+%% DEFAULT WAVELET:
 % Uses a global threshold for the wavelets. Wavelet family is coiflet 
 % (level depending). Threshold the wavelet coefficients to generate 
 % artifact signals, reconstructing signal as channels x samples format.
 else
-    % Set wavelet level depending on the sampling rate.
-    if EEG.srate > 500; wavLvl = 10;
-    elseif EEG.srate > 250 && EEG.srate <= 500; wavLvl = 9;
-    elseif EEG.srate <=250; wavLvl = 8;
+    % Set wavelet and decomposition level depending on the sampling rate 
+    % and paradigm.
+    if params.paradigm.ERP.on
+        wavFam = 'coif4' ;
+        if EEG.srate > 500; wavLvl = 11;
+        elseif EEG.srate > 250 && EEG.srate <= 500; wavLvl = 10;
+        elseif EEG.srate <=250; wavLvl = 9;
+        end
+    else
+        wavFam = 'bior4.4' ;
+        if EEG.srate > 500; wavLvl = 10;
+        elseif EEG.srate > 250 && EEG.srate <= 500; wavLvl = 9;
+        elseif EEG.srate <=250; wavLvl = 8;
+        end
     end
 
-    % Set the wavelet family depending on user input
-    wavFam = 'bior6.8' ;
-
-    % Set the threshold rule depending on user input (when applicable) and
-    % paradigm.
+    % Set the threshold rule depending on user input (only available for
+    % ERP paradigms).
     if params.paradigm.ERP.on && params.wavelet.softThresh
         ThresholdRule = 'Soft' ;
     else; ThresholdRule = 'Hard' ;

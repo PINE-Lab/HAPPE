@@ -42,27 +42,34 @@
 % You should have received a copy of the GNU General Public License along
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
-function [EEG, dataQC] = happe_interpChanBySeg(EEG, dataQC, currFile)
+function [EEG, dataQC] = happe_interpChanBySeg(EEG, dataQC, currFile, params)
 fprintf('Interpolating bad data...\n') ;
-eegChans = [1:size(EEG.chanlocs,2)] ;
-chanNames = {EEG.chanlocs.labels} ;
+if params.loadInfo.chanlocs.inc && params.reref.on && params.reref.flat
+    EEGtemp = pop_select(EEG, 'channel', setdiff({EEG.chanlocs.labels}, ...
+        params.reref.chan)) ;
+else; EEGtemp = EEG ;
+end
+
+eegChans = 1:size(EEGtemp.chanlocs, 2) ;
+chanNames = {EEGtemp.chanlocs.labels} ;
 rejOps.measure = [1 1 1 1] ;
 rejOps.z = [3 3 3 3] ;
-if length(size(EEG.data)) > 2
+if length(size(EEGtemp.data)) > 2
     status = '' ;
-    lengthsEp = cell(1, size(EEG.data, 3)) ;
-    for v=1:size(EEG.data, 3)
-        listProps = single_epoch_channel_properties(EEG, v, eegChans);
+    lengthsEp = cell(1, size(EEGtemp.data, 3)) ;
+    for v=1:size(EEGtemp.data, 3)
+        listProps = single_epoch_channel_properties(EEGtemp, v, eegChans);
         lengthsEp{v} = eegChans(logical(min_z(listProps, rejOps)));
         badChanNames = chanNames(lengthsEp{v}) ;
-        status = [status sprintf('[%d:',v) sprintf(' %s', badChanNames{:}) ']'] ;
+        status = [status sprintf('[%d:',v) sprintf(' %s', ...
+            badChanNames{:}) ']'] ; %#ok<AGROW> 
     end
-    EEG = h_epoch_interp_spl(EEG, lengthsEp, []) ;
+    EEG = h_epoch_interp_spl(EEG, lengthsEp, EEG.nbchan) ;
     EEG.saved = 'no' ;
 
     % Add info about which channels were interpolated for each 
     % segment to the dataQM output.
-    EEG.etc.epoch_interp_info = [status] ;
+    EEG.etc.epoch_interp_info = status ;
     dataQC{currFile,9} = cellstr(status) ;
 end
 end

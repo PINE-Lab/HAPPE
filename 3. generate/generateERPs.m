@@ -10,7 +10,7 @@
 % Author: A.D. Monachino, PINE Lab at Northeastern University, 2022
 %
 % This file is part of HAPPE.
-% Copyright 2018-2022 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
+% Copyright 2018-2023 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
 %
 % HAPPE is free software: you can redistribute it and/or modify it under
 % the terms of the GNU General Public License as published by the Free
@@ -26,14 +26,17 @@
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
 %% SET FOLDERS AND PATH
+% Use input from the command line to set the path to the data. If an 
+% invalid path is entered, repeat until a valid path is entered.
 clear ;
-fprintf('Preparing HAPPE generateERPs add-on...\n') ;
-happeDir = strrep(fileparts(which(mfilename('fullpath'))), '\add-ons', '') ;
-addpath([happeDir filesep 'scripts'], ...
-    [happeDir filesep 'scripts' filesep 'UI_scripts'], ...
-    [happeDir filesep 'add-ons'], ...
-    [happeDir filesep 'add-ons' filesep 'generate'], ...
-    [happeDir filesep 'add-ons' filesep 'scripts']) ;
+fprintf('Preparing HAPPE generateERPs...\n') ;
+happeDir = strrep(fileparts(which(mfilename('fullpath'))), [filesep '3. ' ...
+    'generate'], '') ;
+addpath([happeDir filesep '3. generate'], ...
+    [happeDir filesep 'files'], ...
+    [happeDir filesep 'scripts'], ...
+    [happeDir filesep 'scripts' filesep 'ui'], ...
+    [happeDir filesep 'scripts' filesep 'support']) ;
 
 %% DETERMINE AND SET PATH TO THE DATA
 % Use input from the command line to set the path to the data. If an 
