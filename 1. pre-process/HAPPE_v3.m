@@ -1,5 +1,5 @@
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-% HAPPE Version 3.2
+% HAPPE Version 3.3
 %
 % Developed at Northeastern University's PINE Lab
 %
