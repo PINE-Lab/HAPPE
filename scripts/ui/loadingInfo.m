@@ -81,7 +81,7 @@ if loadInfo.inputFormat == 1
         if ~any(cellfun(@(m)isequal(m,loadInfo.layout),List(1,:)))
             [loadInfo.chanlocs.inc, loadInfo.chanlocs.file] = determ_chanLocs() ;
         else
-            loadInfo.chanlocs.file = [happeDir filesep ...
+            loadInfo.chanlocs.file = [happeDir filesep 'files' filesep ...
                 'acquisition_layout_information' filesep] ;
             if loadInfo.layout(1) == 1
                 if loadInfo.layout(2) == 64
