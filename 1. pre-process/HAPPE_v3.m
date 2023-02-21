@@ -121,6 +121,24 @@ if exist('cleanline', 'file')
 else; error('Please make sure cleanline is on your path') ;
 end
 
+%% ENSURE TOOLBOXES ARE INSTALLED
+toolboxes = matlab.addons.installedAddons ;
+if ~ismember('Wavelet Toolbox', toolboxes.Name)
+    error('ERROR: WAVELET TOOLBOX NOT INSTALLED. INSTALL TOOLBOX TO RUN HAPPE!') ;
+end
+if ~ismember('Signal Processing Toolbox', toolboxes.Name)
+    error(['ERROR: SIGNAL PROCESSING TOOLBOX NOT INSTALLED. INSTALL ' ...
+        'TOOLBOX TO RUN HAPPE!']) ;
+end
+if ~ismember('Statistics and Machine Learning Toolbox', toolboxes.Name)
+    error(['ERROR: STATISTICS AND MACHINE LEARNING TOOLBOX NOT INSTALLED. ' ...
+        'INSTALL TOOLBOX TO RUN HAPPE!']) ;
+end
+if ~ismember('Optimization Toolbox', toolboxes.Name)
+    error('ERROR: OPTIMIZATION TOOLBOX NOT INSTALLED. INSTALL TOOLBOX TO RUN HAPPE!') ;
+end
+clear('toolboxes') ;
+
 %% DETERMINE AND SET PATH TO DATA
 % Use input from the Command Window to set the path to the data. If an 
 % invalid path is entered, repeat until a valid path is entered.

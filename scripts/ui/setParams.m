@@ -241,14 +241,20 @@ while true
 
     if (~preExist || strcmpi(paramChoice, 'line noise reduction')) && ~reprocessing
         fprintf(['Line noise reduction method:\n  cleanline = Use Tim ' ...
-            'Mullen''s CleanLine\n  notch = Use a notch filter (COMING SOON)\n']) ;
+            'Mullen''s CleanLine\n  notch = Use a notch filter.\n']) ;
         params.lineNoise.cl = choose2('notch', 'cleanline') ;
         if params.lineNoise.cl
             fprintf(['Use legacy or default line noise reduction?\n  default - Default method' ...
                 ' optimized in HAPPE v2\n  legacy - Method from HAPPE v1 (NOT' ...
                 ' RECOMMENDED\n']) ;
             params.lineNoise.legacy = choose2('default', 'legacy') ;
-        else; error('Notch filter not currently available') ;
+        else
+            fprintf(['Enter lower cutoff, in Hz, for the notch filter:\n' ...
+                'Example:' sprintf(' %i', params.lineNoise.freq-1) '\n']) ;
+            params.lineNoise.low = input('> ') ;
+            fprintf(['Enter higher cutoff, in Hz, for the notch filter:\n' ...
+                'Example:' sprintf(' %i', params.lineNoise.freq+1) '\n']) ;
+            params.lineNoise.high = input('> ') ;
         end
     end
     
@@ -276,11 +282,33 @@ while true
         fprintf('Filter your data? [Y/N]\n') ;
         params.filt.on = choose2('N', 'Y') ;
         if params.filt.on
-            params.filt.lowpass = input(['Enter low-pass filter, in Hz:\n' ...
-                'Common low-pass filter is 100 Hz.\n> ']) ;
-            params.filt.highpass = input(['Enter high-pass filter, in Hz:\n' ...
-                'Common high-pass filter is 1 Hz. NOTE: Use a >=1 Hz filter' ...
-                ' if running muscIL.\n> ']) ;
+            params.filt.lowpass = [];
+            params.filt.highpass = [];
+            fprintf(['Filter type:\n  lowpass = Use a low-pass filter\n  ' ...
+                'highpass = Use a high-pass filter\n  bandpass = Use ' ...
+                'a band-pass filter\n']) ;
+            while true
+                ui = input('> ', 's') ;
+                if strcmpi(ui, 'lowpass')
+                    params.filt.method = [1,0] ; break ;
+                elseif strcmpi(ui, 'highpass')
+                    params.filt.method = [0,1] ; break ;
+                elseif strcmpi(ui, 'bandpass')
+                    params.filt.method = [1,1] ; break ;
+                else; fprintf(['Invalid input: please enter "lowpass", ' ...
+                        '"highpass", or "bandpass" (without quotations).']) ;
+                end
+            end
+            if params.filt.method(1)
+                params.filt.lowpass = input(['Enter low-pass filter, in Hz:\n' ...
+                    'Common low-pass filter is 100 Hz.\n> ']) ;
+            end
+            if params.filt.method(2)
+                params.filt.highpass = input(['Enter high-pass filter, in Hz:\n' ...
+                    'Common high-pass filter is 1 Hz. NOTE: Use a >=1 Hz filter' ...
+                    ' if running muscIL.\n> ']) ;
+            end
+        else; params.filt.method = [0,0] ;
         end
         params.filt.butter = 0 ;
     end

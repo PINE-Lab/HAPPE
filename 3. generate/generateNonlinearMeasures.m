@@ -191,7 +191,7 @@ if ~preExist || changedParams
     else
         fprintf('File name (Do not include .mat):\n') ;
         paramFile = paramFile_validateExist([input('> ', 's') '.mat'], ...
-            'genERP_parameters_', 0) ;
+            'genNlM_parameters_', 0) ;
     end
 
     % Save the params variable to a .mat file using the name created above.

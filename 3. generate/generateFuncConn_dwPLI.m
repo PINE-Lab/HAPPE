@@ -124,7 +124,7 @@ fprintf('Creating outputs folder...\n') ;
 if ~isfolder([srcDir filesep 'generateFuncConn_dwPLI'])
     mkdir([srcDir filesep 'generateFuncConn_dwPLI']) ;
 end
-addpath('generate_dwPLI') ;
+addpath('generateFuncConn_dwPLI') ;
 fprintf('Outputs folder created.\n') ;
 
 %% COLLECT FILES
@@ -226,7 +226,7 @@ for currfile=1:size(FileNames,2)
 end
 
 %% PRINT OUT TABLE
-cd([srcDir filesep 'generate_dwPLI']) ;
+cd([srcDir filesep 'generateFuncConn_dwPLI']) ;
 if customBands
     bandNames = cell(1, size(bands,1)) ;
     for i=1:stop

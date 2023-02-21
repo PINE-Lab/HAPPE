@@ -1,7 +1,7 @@
 function [customBands, bands] = setFreqBands()
-fprintf(['Choose how to define bands:\n  default - Delta (2-4), Theta (4-6),' ...
+fprintf(['Choose how to define frequency bands:\n  default = Delta (2-4), Theta (4-6),' ...
     ' LowAlpha (6-9), HighAlpha (9-12), Beta (13-30), Gamma (30-45)\n  ' ...
-    'custom - Create custom bands using user input\n']) ;
+    'custom = Create custom bands using user input\n']) ;
 customBands = choose2('default', 'custom') ;
 if customBands
     bands = [] ;

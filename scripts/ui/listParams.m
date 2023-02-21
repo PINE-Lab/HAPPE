@@ -151,7 +151,9 @@ if isfield(params, 'lineNoise')
         if params.lineNoise.legacy; fprintf('Legacy\n') ;
         else; fprintf('Default\n') ;
         end
-    else; fprintf('Notch Filter\n') ;
+    else
+        fprintf(['Notch Filter\n - Low Cutoff: ' num2str(params.lineNoise.low) ...
+            '\n - High Cutoff: ' num2str(params.lineNoise.high) '\n']) ;
     end
 end
 
