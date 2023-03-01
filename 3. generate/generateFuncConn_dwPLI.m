@@ -229,10 +229,11 @@ end
 cd([srcDir filesep 'generateFuncConn_dwPLI']) ;
 if customBands
     bandNames = cell(1, size(bands,1)) ;
-    for i=1:stop
-        bandNames{i} = [bands{i,1} ' (' bands{i,2} '-' bands{i,3} ')'] ;
+    for i=1:size(bands,1)
+        if calcAll && i==size(bands,1); bandNames{i} = 'All' ;
+        else; bandNames{i} = [bands{i,1} ' (' bands{i,2} '-' bands{i,3} ')'] ;
+        end
     end
-    if calcAll; bandNames{end} = 'All' ; end
 else; bandNames = bands(:,1)' ;
 end
 
