@@ -72,8 +72,8 @@ if lnParams.cl
             'maximumIterations', 10)) ;
     end
 else
-    outEEG = pop_eegfiltnew(inEEG, 'locutoff', params.lineNoise.low, ...
-        'hicutoff', params.lineNoise.high, 'revfilt', 1, 'plotfreqz', 0);
+    outEEG = pop_eegfiltnew(inEEG, 'locutoff', lnParams.low, 'hicutoff', ...
+        lnParams.high, 'revfilt', 1, 'plotfreqz', 0);
 end
 
 % LINE NOISE REDUCTION QM: Assesses the performance of line noise reduction.
