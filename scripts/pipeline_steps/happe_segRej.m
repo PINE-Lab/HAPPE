@@ -79,7 +79,17 @@ if ismember(params.segRej.method, {'similarity', 'both'})
         params.reref.flat
         EEGtemp = pop_select(EEG, 'channel', ...
             setdiff({EEG.chanlocs.labels}, params.reref.chan)) ;
-    else; EEGtemp = EEG ;
+    else
+        zeroChanIndxs = [] ;
+        for i=1:size(EEG.data,1)
+            if all(all(EEG.data(i,:,:) == 0)); zeroChanIndxs = [zeroChanIndxs i]; end
+        end
+        if isempty(zeroChanIndxs); EEGtemp = EEG ;
+        else
+            chans = {EEG.chanlocs.labels} ;
+            EEGtemp = pop_select(EEG, 'channel', chans(setdiff(1:size(chans,2), ...
+                zeroChanIndxs))) ;
+        end
     end
     
     % Assess the joint-probability depending on whether assessing a ROI or
@@ -99,7 +109,23 @@ if ismember(params.segRej.method, {'similarity', 'both'})
         params.reref.flat
         EEG.reject.rejjpE = [EEGtemp.reject.rejjpE; zeros(1, ...
             size(EEGtemp.reject.rejjpE,2))] ;
-    else; EEG.reject.rejjpE = EEGtemp.reject.rejjpE ;
+    else
+        if isempty(zeroChanIndxs)
+            EEG.reject.rejjpE = EEGtemp.reject.rejjpE ;
+        else
+            rejjpE_temp = [] ;
+            indx = 1;
+            for i=1:EEG.nbchan
+                if ismember(i, zeroChanIndxs)
+                    rejjpE_temp = [rejjpE_temp; zeros(1, ...
+                        size(EEGtemp.reject.rejjpE,2))] ;
+                else
+                    rejjpE_temp = [rejjpE_temp; EEGtemp.reject.rejjpE(indx,:)] ;
+                    indx = indx+1 ;
+                end
+            end
+        end
+        EEGtemp.reject.rejjpE = rejjpE_temp ;
     end
     EEG.reject.rejjp = EEGtemp.reject.rejjp ;
 end
