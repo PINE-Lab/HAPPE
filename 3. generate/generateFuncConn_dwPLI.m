@@ -13,10 +13,6 @@
 %
 % Developed at Northeastern University's PINE Lab
 %
-% For a detailed description of this script and user options, please see 
-% the following manuscript(s):
-%   Monachino, et al., (----)
-%
 % Authors: A.D. Monachino, PINE Lab at Northeastern University, 2022
 %          Laurel J. Gabard-Durnam, PINE Lab at Northestern University, 2022
 %          Adela Desowska, ..., 2022
@@ -102,19 +98,19 @@ if compSubset
     subsetList = [];
     indx = 1 ;
     while true
-        fprintf(['Enter the electrode(s) in the first subset, one at a time, ' ...
+        fprintf(['Enter the electrode(s) in the subset, one at a time, ' ...
         'pressing enter/return between entries.\nExample: E71\nWhen you ' ...
         'have entered all channels in this subset, input "done" (without' ...
         ' quotations)\n']) ;
-        temp = UI_cellArray(1, []) ;
-        subsetList{indx,1} = unique(temp(~cellfun('isempty',temp))) ;
-        fprintf(['Enter the electrode(s) in the second subset, the same' ...
-            ' way as the first subset.\n']) ;
-        temp = UI_cellArray(1, []) ;
-        subsetList{indx,2} = unique(temp(~cellfun('isempty',temp))) ;
+        temp = UI_cellArray(1,[]) ;
+        subsetList{indx,2} = unique(temp(~cellfun('isempty', temp))) ;
+        fprintf('Enter a name for this subset:\n') ;
+        subsetList{indx,1} = input('> ','s') ;
         indx = indx+1 ;
-        fprintf('Compare another pair of subsets? [Y/N]\n') ;
-        if ~choose2('N','Y'); break; end
+        if indx > 2
+            fprintf('Add another subset? [Y/N]\n') ;
+            if ~choose2('N','Y'); break; end
+        end
     end  
 end
 
@@ -143,7 +139,7 @@ FC_mat = cell(size(FileNames,2), size(bands,1)) ; % Functional Connectivity Outp
 FC_ave = cell(size(FileNames,2), size(bands,1)) ;
 FC_abs = cell(size(FileNames,2), size(bands,1)) ;
 varNames = cell(size(FileNames,2),1) ;
-if compSubset; FC_subsets = cell(size(FileNames,2), size(subsetList,1), size(bands,1)) ; end
+if compSubset; FC_subsets = cell(size(FileNames,2), nchoosek(size(subsetList,1),2), size(bands,1)) ; end
 
 %% SET CFG SETTINGS
 % Laplacian Filter:
@@ -166,6 +162,12 @@ for currfile=1:size(FileNames,2)
     % LOAD THE DATA
     EEGraw = load('-mat', FileNames{currfile}) ;
 
+%     % REMOVE FLATLINE CHANNELS
+%     zeroChanIndxs = [] ;
+%     for i=1:size(EEGraw.data,1)
+%         if all(all(psd(i,:,:) == 0)); zeroChanIndxs = [zeroChanIndxs i]; end
+%     end
+
     % CONVERT TO FIELDTRIP FORMAT
     EEG = eeglab2fieldtrip(EEGraw, 'preprocessing') ;
 
@@ -175,15 +177,13 @@ for currfile=1:size(FileNames,2)
 
     % IF SUBSETS, COLLECT THE CHANNEL INDEXES
     if compSubset
-        setIndxs = cell(size(subsetList,1), size(subsetList,2)) ;
+        setIndxs = cell(size(subsetList,1), 1) ;
         for currSet=1:size(subsetList,1)
-            for j=1:2
-                set = cell(1,size(subsetList{currSet,j},2)) ;
-                for i=1:size(subsetList{currSet,j},2)
-                    set{i} = find(ismember(EEG.label, subsetList{currSet,j}{i})) ;
-                end
-                setIndxs{currSet,j} = set ;
+            set = cell(1,size(subsetList{currSet,2},2)) ;
+            for i=1:size(subsetList{currSet,2},2)
+                set{i} = find(ismember(EEG.label, subsetList{currSet,2}{i})) ;
             end
+            setIndxs{currSet} = set ;
         end
     end
 
@@ -216,10 +216,11 @@ for currfile=1:size(FileNames,2)
             FC_mat{currfile, currband} = ft_selectdata(cfg_band, dwPLI_all).wpli_debiasedspctrm ;
         end
         if compSubset
-            for i=1:size(subsetList,1)
+            combos = nchoosek(1:size(subsetList,1),2) ;
+            for i=1:size(combos,1)
                 temp = FC_mat{currfile, currband} ;
-                FC_subsets{currfile,i,currband} = mean(temp(cell2mat(setIndxs{i,1}), ...
-                    cell2mat(setIndxs{i,2})), 'all', 'omitnan') ;
+                FC_subsets{currfile,i,currband} = mean(temp(cell2mat(setIndxs{combos(i,1),1}), ...
+                    cell2mat(setIndxs{combos(i,2),1})), 'all', 'omitnan') ;
             end
         end
     end
@@ -238,12 +239,9 @@ else; bandNames = bands(:,1)' ;
 end
 
 if compSubset
-    subNames = cell(1, size(subsetList,1)) ;
-    for i=1:size(subsetList,1)
-        set1 = subsetList{i,1} ;
-        set2 = subsetList{i,2} ;
-        str = [sprintf('%s, ', set1{1:end-1}) set1{end} ' x ' ...
-            sprintf('%s, ', set2{1:end-1}) set2{end}] ;
+    subNames = cell(1, size(combos,1)) ;
+    for i=1:size(combos,1)
+        str = [subsetList{combos(i,1),1} ' x ' subsetList{combos(i,2)}] ;
         if length(str) >= 30; str = [str(1:27) '...'] ; end
         subNames{i} = str ;
     end
