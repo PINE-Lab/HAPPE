@@ -124,8 +124,8 @@ if ismember(params.segRej.method, {'similarity', 'both'})
                     indx = indx+1 ;
                 end
             end
+            EEGtemp.reject.rejjpE = rejjpE_temp ;
         end
-        EEGtemp.reject.rejjpE = rejjpE_temp ;
     end
     EEG.reject.rejjp = EEGtemp.reject.rejjp ;
 end
