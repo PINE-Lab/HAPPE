@@ -280,7 +280,7 @@ dataQCnames = {'File_Length_in_Seconds', 'Number_User-Selected_Chans', ...
     'Number_Good_Chans_Selected', 'Percent_Good_Chans_Selected', 'Bad_Chan_IDs', ...
     'Percent_Var_Retained_Post-Wav', 'Number_ICs_Rej', 'Percent_ICs_Rej', ...
     'Chans_Interpolated_per_Seg', 'Number_Segs_Pre-Seg_Rej', ...
-    'Number_Segs_Post-Seg_Rej', 'Percent_Segs_Post-Seg_Rej'} ;
+    'Number_Segs_Post-Seg_Rej', 'Percent_Segs_Post-Seg_Rej', 'Kept_Segs_Indxs'} ;
 dataQC = cell(length(FileNames), length(dataQCnames)) ;
 % If processing for tasks, create an additional variable to hold specific
 % data metrics for each onset tag.
@@ -830,7 +830,7 @@ for currFile = 1:length(FileNames)
         % the entire set of channels present in the data. If the data is
         % continuous or is a single trial, cannot reject segments.
         if params.segRej.on && EEG.trials > 1
-            try EEG = happe_segRej(EEG, params) ;
+            try [EEG, keptTrials] = happe_segRej(EEG, params) ;
                 
                 % SAVE FILE WITH SEGMENTS REJECTED
                 pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
@@ -846,6 +846,8 @@ for currFile = 1:length(FileNames)
         % retained post-segment rejection.
         dataQC{currFile, 11} = EEG.trials ;
         dataQC{currFile, 12} = dataQC{currFile, 11}/dataQC{currFile, 10}*100 ;
+        dataQC{currFile, 13} = keptTrials ;
+        clear('keptTrials') ;
         
         %% INTERPOLATE BAD CHANNELS
         % If the file has channel locations, interpolate the bad channels
