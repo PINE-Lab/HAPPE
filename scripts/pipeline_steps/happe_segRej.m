@@ -36,7 +36,7 @@
 % You should have received a copy of the GNU General Public License along
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
-function [EEG] = happe_segRej(EEG, params) 
+function [EEG, keptTrials] = happe_segRej(EEG, params) 
 fprintf('Rejecting segments...\n') ;
 % GATHER ROI INDXS: If rejecting based on a ROI, collect the indxs for the
 % channels in the ROI.
@@ -136,7 +136,9 @@ if params.paradigm.task && params.loadInfo.inputFormat == 1 && ...
     EEG = pop_selectevent(EEG, 'status', 'good', 'deleteevents', ...
         'on', 'deleteepochs', 'on', 'invertepochs', 'off') ;
 end
-EEG = eeg_rejsuperpose(EEG, 1, 0, 1, 1, 1, 1, 1, 1) ; 
+EEG = eeg_rejsuperpose(EEG, 1, 0, 1, 1, 1, 1, 1, 1) ;
+if isfield(EEG, 'reject'); keptTrials = find(EEG.reject.rejglobal==0); end
+if isfield(EEG, 'rej'); keptTrials = find(EEG.rej.rejglobal==0); end
 
 % REJECT TRIALS: Prior to rejection, check to see if
 % all segments have been rejected, and if so, alert the user
