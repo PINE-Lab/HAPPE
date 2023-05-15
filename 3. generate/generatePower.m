@@ -832,7 +832,9 @@ for currFile = 1:size(FileNames,2)
                         sp_peaks = [] ;
                         sp_error = cell(EEG.trials+1,1) ;
                         sp_r = cell(EEG.trials+1,1) ;
-                        sp_bandpeaks = cell(EEG.trials+1,size(params.specparam.bands.vals,1)) ;
+                        if params.specparam.bands.on
+                            sp_bandpeaks = cell(EEG.trials+1,size(params.specparam.bands.vals,1)) ;
+                        end
                         for currSeg=1:EEG.trials+1
                             sp_aper = [sp_aper; allSubs{currFile,4}{currSeg, ...
                                 filteredROIindxs(currROI)}(currChan).aperiodic_params] ;
@@ -1043,12 +1045,12 @@ for currFile = 1:size(FileNames,2)
                         sp_outMat = [sp_outMat; sp_outMat_temp] ;
                     end
                     if ~params.specparam.method(1)
-                        tempBand = {} ;
+                        tempBand = [] ;
                         for i=1:size(sp_outMat_temp,1)
-                            tempBand = [tempBand sp_outMat_temp{i,:}] ;
+                            tempBand = [tempBand sp_outMat_temp(i,:)] ;
                         end
                         subLvl_specparam{1,currROI} = [subLvl_specparam{1,...
-                            currROI}; tempBand] ;
+                            currROI}; num2cell(tempBand)] ;
                     end
                     % Visualizations for chans
                     figName = [srcDir filesep 'generatePower' filesep ...
