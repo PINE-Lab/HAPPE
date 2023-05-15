@@ -846,7 +846,8 @@ for currFile = 1:length(FileNames)
         % retained post-segment rejection.
         dataQC{currFile, 11} = EEG.trials ;
         dataQC{currFile, 12} = dataQC{currFile, 11}/dataQC{currFile, 10}*100 ;
-        dataQC{currFile, 13} = keptTrials ;
+        dataQC{currFile, 13} = [sprintf('%i, ', keptTrials(1:end-1)), ...
+            num2str(keptTrials(end))] ;
         clear('keptTrials') ;
         
         %% INTERPOLATE BAD CHANNELS
