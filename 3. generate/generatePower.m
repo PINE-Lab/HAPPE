@@ -8,7 +8,7 @@
 % to work with MATLAB.
 %
 % If using this script for analyses in publications, cite both HAPPE and
-% the EEGLAB wrapper script.
+% the specparam/FOOOF EEGLAB wrapper script.
 %       Donoghue T, Haller M, Peterson EJ, Varma P, Sebastian P, Gao R, 
 %   Noto T, Lara AH, Wallis JD, Knight RT, Shestyuk A, & Voytek B (2020). 
 %   Parameterizing neural power spectra into periodic and aperiodic
@@ -51,8 +51,13 @@ addpath([happeDir filesep '3. generate'], ...
     [happeDir filesep 'scripts'], ...
     [happeDir filesep 'scripts' filesep 'ui'], ...
     [happeDir filesep 'scripts' filesep 'support'], ...
+    [happeDir filesep 'packages' filesep 'eeglab2022.0'], ...
     genpath([happeDir filesep 'eeglab2022.0' filesep 'plugins' filesep ...
     'EEGLAB-specparam-master'])) ;
+pluginDir = dir([happeDir filesep 'packages' filesep 'eeglab2022.0' filesep 'plugins']) ;
+pluginDir = strcat([happeDir filesep 'packages' filesep 'eeglab2022.0'], ...
+    filesep, 'plugins', filesep, {pluginDir.name}, ';') ;
+addpath([pluginDir{:}]) ;
 
 %% DETERMINE AND SET PATH TO THE DATA
 % Use input from the command line to set the path to the data. If an 
@@ -66,7 +71,7 @@ end
 cd(srcDir) ;
 
 %% CREATE OUTPUT FOLDERS P.1
-% Create the folders in which to store outputs
+% Create the folder in which to store outputs.
 fprintf('Creating output folders...\n') ;
 if ~isfolder([srcDir filesep 'generatePower']); mkdir([srcDir filesep 'generatePower']); end
 addpath('generatePower') ;
@@ -103,17 +108,23 @@ else; changedParams = 0; params = struct();
 end
 
 %% SET PARAMETERS THROUGH USER INPUT
+% Set the necessary parameters to run through this script using user input
+% via the Command Window.
 while true
     userChoice = '' ;
     if preExist && ~changedParams; break; end
 
+    % CHANGING PARAMETERS:
+    % List out the options of parameters that can be changed by the user.
     if changedParams
-        fprintf(['Parameter to change: psd indiv/ave/both epochs, ' ...
-            'limit frequencies,\nchannels of interest, power in frequency ' ...
+        fprintf(['Parameter to change: psd indiv/ave/both, ' ...
+            'limit output frequencies,\nchannels of interest, power in frequency ' ...
             'bands, specparam,\nspecparam outputs, specparam python, ' ...
             'specparam spectrum bounds,\nspecparam peak width, ' ...
             'specparam peak number, specparam peak height,\nspecparam ' ...
-            'peak threshold, specparam mode, specparam peaks by freq bands\n']) ;
+            'peak threshold, specparam mode, specparam peaks by freq bands\n' ...
+            'Enter "done" (without quotations) when finished changing ' ...
+            'parameters.\n']) ;
         userChoice = input('> ', 's') ;
     end
 
@@ -122,7 +133,7 @@ while true
     % for the average of epochs, or both. If outputting for individual
     % epochs, determine whether to use .csv or .xlsx for the output file
     % type.
-    if ~preExist || strcmpi(userChoice, 'psd indiv/ave/both epochs')
+    if ~preExist || strcmpi(userChoice, 'psd indiv/ave/both')
         [params.method, params.csvFormat] = determ_IndivAveBoth() ;
     end
 
@@ -130,8 +141,9 @@ while true
     % Determine whether to select a subset of frequencies to include in the
     % PSD output file(s). For example, a user may choose to only examine
     % frequencies below 100 Hz.
-    if ~preExist || strcmpi(userChoice, 'limit frequencies')
-        fprintf('Limit the frequencies included in the PSD output? [Y/N]\n') ;
+    if ~preExist || strcmpi(userChoice, 'limit output frequencies')
+        fprintf(['Limit the frequencies included in the PSD output? [Y/N]\n' ...
+            'Example: include frequencies from 1 Hz to 40 Hz\n']) ;
         params.freqs.limit = choose2('N','Y') ;
         if params.freqs.limit
             params.freqs.min = input('Lower frequency bound:\nIf none, enter 0\n> ') ;
@@ -139,18 +151,23 @@ while true
         end
     end
 
+    % CHANNELS OF INTEREST/REGIONS OF INTEREST:
+    % Determine the collections of channels of interest in which to examine
+    % power measures. Enable the selection of all channels, or a subset,
+    % and for multiple regions of interest.
     if ~preExist || strcmpi('channels of interest', userChoice)
         params.rois = {} ;
         indx = 1;
         while true
             [params.rois{1,indx}, params.rois{2,indx}] = determ_chanIDs() ;
-            fprintf('Enter a name for this subset:\n') ;
+            fprintf(['Enter a name for this subset:\nNOTE: We recommend ' ...
+                'short names of approximately 6 characters or less\n']) ;
             params.rois{3,indx} = input('> ', 's') ;
             fprintf('Add another subset? [Y/N]\n') ;
             if ~choose2('N','Y'); break; end
             indx = indx+1;
         end
-        % Remove duplicate ROI names
+        % Remove ROIs with duplicate names.
         for i=1:size(params.rois,2)
             if sum(ismember(params.rois(3,:), params.rois{3,i})) > 1
                 dupeNames = find(strcmpi(params.rois(3,:), params.rois{3,i})) ;
@@ -158,7 +175,7 @@ while true
                     dupeNames(2:end))) ;
             end
         end
-        % Remove duplicate requests for all channels
+        % Remove duplicate requests for "all" channels
         if sum(ismember(params.rois(1,:), 'all')) > 1
             dupeNames = find(strcmpi(params.rois(1,:), 'all')) ;
             params.rois = params.rois(:, setdiff(1:size(params.rois,2), ...
@@ -182,18 +199,22 @@ while true
     % CALCULATE SPECPARAM (FORMERLY KNOWN AS FOOOF):
     % Determine if calculating specparam. If so, set the relevant settings
     % including whether to enable visualizations, the bounds of the
-    % spectrum to fit, and peak width limits, among others. Currently only
-    % calculates specparam on the average PSD, but has the capacity to
-    % enable calculation by epoch (see comments below).
+    % spectrum to fit, and peak width limits, among others.
     if ~preExist || strcmpi(userChoice, 'specparam')
         fprintf('Calculate specparam (as from Voytek & colleagues)? [Y/N]\n') ;
         params.specparam.on = choose2('N','Y') ;
     end
+    % Calculating Individual, Average, or Both Trials/Segments: 
+    % If multiple ROIs, determine whether to split the output files by ROI
+    % or keep all information from all ROIs in a single file. When
+    % splitting, determine whether outputs should be multiple .csv files or
+    % a single Excel file with multiple sheets.
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam outputs'))
         [params.specparam.method, params.specparam.csvFormat] = determ_IndivAveBoth() ;
         if size(params.rois,2) > 1
-            fprintf(['Split specparam output files by ROIs? [Y/N]\nNOTE: Choosing' ...
-                ' not to split = more columns; choosing to split = more files/tabs.\n']) ;
+            fprintf(['Split specparam output files by ROIs? [Y/N]\nNOTE: ' ...
+                'Choosing not to split = more columns; choosing to split ' ...
+                '= more files/tabs.\n']) ;
             params.specparam.splitROI.on = choose2('N','Y') ;
             if params.specparam.splitROI.on
                 fprintf(['Print the ROIs as seperate .csv files or as sheets\n' ...
@@ -210,42 +231,61 @@ while true
                 end
             else; params.specparam.splitROI.csvFormat = 0 ;
             end
+        else; params.specparam.splitROI.on = 0;
         end
         
+        % Determine if enabling visualizations during the run. Only
+        % recommended for a single file with a small ROI for testing
+        % reasons as it can dramatically slow down processing and result in
+        % many windows. Visuals will save regardless of choice.
         if params.specparam.method(2)
             fprintf('Enable visualizations? [Y/N]\n') ;
             params.specparam.vis = choose2('N', 'Y') ;
         else; params.specparam.vis = 0 ;
         end
     end
+    % Determine Python Version:
+    % Get the python version installed on the user's computer. For Windows,
+    % the version number is sufficient. For Mac and Linux computers, you
+    % need to enter the full path to the python executable.
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam python'))
-        params.specparam.pyVers = input('Python version:\n> ','s') ;
+        if ispc; params.specparam.pyVers = input('Pythong version:\n','s') ;
+        else; params.specparam.pyVers = input(['Full path to your python ' ...
+                'executable:\n'], 's') ;
+        end
     end
+    % Determine Bounds of Specparam Spectrum:
+    % Determine the upper and lower limits, in Hz, for the specparam
+    % spectrum calculations.
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam spectrum bounds'))
         fprintf('Enter specparam lower bound of spectrum to fit, in Hz:\nExample: 2\n') ;
         params.specparam.min = input('> ') ;
         fprintf('Enter specparam upper bound of spectrum to fit, in Hz:\nExample: 40\n') ;
         params.specparam.max = input('> ');
     end
-    % Requirements for specparam function - DO NOT RENAME!
+    % Determine Peak Width - DO NOT RENAME VARIABLE
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam peak width'))
         fprintf('Enter lower peak width limit:\n') ;
         params.specparam.settings.peak_width_limits(1) = input('> ') ;
         fprintf('Enter upper peak width limit:\n') ;
         params.specparam.settings.peak_width_limits(2) = input('> ') ;
     end
+    % Determine Number of Peaks to Find - DO NOT RENAME VARIABLE
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam peak number'))
         fprintf('Enter max number of peaks:\n') ;
         params.specparam.settings.max_n_peaks = input('> ') ;
     end
+    % Determine Minimum Peak Height - DO NOT RENAME VARIABLE
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam peak height'))
         fprintf('Minimum peak height:\n') ;
         params.specparam.settings.min_peak_height = input('> ') ;
     end
+    % Determine Peak Threshold - DO NOT RENAME VARIABLE
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam peak threshold'))
             fprintf('Enter peak threshold:\n') ;
             params.specparam.settings.peak_threshold = input('> ') ;
     end
+    % Determine Peak Mode - DO NOT RENAME VARIABLE
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam peak mode'))
         fprintf(['Aperiodic mode?\n  fixed = fixed aperiodic mode\n  ' ...
             'knee = knee aperiodic mode\n']) ;
@@ -262,6 +302,9 @@ while true
             end
         end
     end
+    % Look for Peaks within Frequency Bands:
+    % Determine whether or not to look for peaks within specific frequency
+    % bands. If so, define the bands in which to look for peaks.
     if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam peaks by freq bands'))
         fprintf('Select peaks within frequency ranges? [Y/N]\n') ;
         params.specparam.bands.on = choose2('N','Y') ;
@@ -270,6 +313,9 @@ while true
         end
     end
 
+    % DONE:
+    % When finished entering parameters, ask the user to review their
+    % parameters and make any necessary corrections.
     if ~preExist || strcmpi('done', userChoice)
         fprintf('Please check your input parameters before continuing.\n') ;
         genPower_listParams(params) ;
@@ -344,18 +390,23 @@ if params.specparam.on
     pyenv('Version', params.specparam.pyVers) ;
 end
 %% SUBJECT LEVEL MATRIX
+% Create a matrix to hold the calculated measures across subjects.
 allSubs = cell(size(FileNames,2),4) ;
-allSubs_PSD = cell(1, size(params.rois,2)) ;
-allSubs_bandpower = cell(2, size(params.rois,2)) ;
-allSubs_specparam = cell(2, size(params.rois,2)) ;
-for i=1:size(allSubs_specparam,2)
-    allSubs_specparam{1,i} = {} ;
+subLvl_PSD = cell(1, size(params.rois,2)) ;
+subLvl_bandpower = cell(2, size(params.rois,2)) ;
+subLvl_specparam = cell(2, size(params.rois,2)) ;
+for i=1:size(subLvl_specparam,2)
+    subLvl_specparam{1,i} = {} ;
 end
 
-%% RUN OVER FILES
+errorLog = {} ;
+
+%% RUN CALCULATIONS ON EACH FILE
 for currFile = 1:size(FileNames,2)
     try
         %% LOAD EEG
+        % Try to load the processed file. If unable to load, alert the user
+        % and rethrow the error.
         try 
             fprintf(['Loading ' FileNames{currFile} '...\n']) ;
             EEG = load('-mat', FileNames{currFile}) ;
@@ -365,16 +416,24 @@ for currFile = 1:size(FileNames,2)
         end
 
         %% FIND CHANNELS OF INTEREST
-        if ~isempty(EEG.chanlocs)
-            chanIndxs = cell(1, size(params.rois,2)) ;
-            for currROI=1:size(chanIndxs,2)
+        % If the EEG has channel locations/names, use the user-provided
+        % channel names in each region to determine the associated index.
+        % If no channel locations are included, 
+        chanIndxs = cell(1, size(params.rois,2)) ;
+        for currROI=1:size(chanIndxs,2)
+            if ~isempty(EEG.chanlocs)
+                % If the ROI requests all channels, simply use all possibly
+                % indicies.
                 if strcmpi(params.rois{1,currROI}, 'all')
                     chanIndxs{1, currROI} = 1:size(EEG.data,1) ;
+                % If selecting to include or exclude channels, find use the
+                % channel locations to get the index associated with the
+                % relevant channel in the data matrix.
                 else
                     temp = [] ;
                     for i=1:size(params.rois{2,currROI}, 2)
                         temp = [temp find(ismember({EEG.chanlocs.labels}, ...
-                            params.rois{2, currROI}{i}))] ;                                %#ok<AGROW> 
+                            params.rois{2, currROI}{i}))] ;                                 
                     end
                     if strcmpi(params.rois{1,currROI}, 'coi_exclude')
                         chanIndxs{1, currROI} = setdiff(1:size(EEG.data,1), ...
@@ -385,17 +444,17 @@ for currFile = 1:size(FileNames,2)
                         error('Invalid channel COI selection.') ;
                     end
                 end
+            else
+                fprintf(['Cannot select ROIs for data without channel names. ' ...
+                    'Will use all existing channels.']) ;
+                chanIndxs{1, currROI} = 1:size(EEG.data,1) ;
             end
-        else
-            fprintf(['Cannot select ROIs for data without channel names. ' ...
-                'Will use all existing channels.']) ;
-            chanIndxs = 1:size(EEG.data,1) ;
         end
     
         %% FIND CHANNELS WITH ALL ZEROS
         zeroChanIndxs = [] ;
         for i=1:size(EEG.data,1)
-            if all(all(EEG.data(i,:,:) == 0)); zeroChanIndxs = [zeroChanIndxs i]; end
+            if all(all(EEG.data(i,:,:) == 0)); zeroChanIndxs = [zeroChanIndxs i]; end %#ok<*AGROW> 
         end
 
         %% CALCULATE MULTITAPER PSD AND 95% CONFIDENCE INTERVALS:
@@ -403,13 +462,13 @@ for currFile = 1:size(FileNames,2)
         % Slepian tapers for each segment within each channel.
         try
             clear('psd', 'psdLow', 'psdHigh') ;
-            fprintf(['Calculating multitaper PSD and 95% confidence ' ...
+            fprintf(['Calculating multitaper PSD and 95%% confidence ' ...
                 'intervals...\n']) ;
             for currChan=1:EEG.nbchan
                 for currSeg=1:EEG.trials
                     [pxx, f, pxxc] = pmtm(EEG.data(currChan,:,currSeg), 4, [], ...
                         EEG.srate, 'Tapers', 'slepian', 'ConfidenceLevel', 0.95) ;
-                    psd(currChan,:,currSeg) = pxx' ;                                %#ok<*SAGROW> 
+                    psd(currChan,:,currSeg) = pxx' ;                        %#ok<*SAGROW> 
                     psdLow(currChan,:,currSeg) = pxxc(:,1)' ;
                     psdHigh(currChan,:,currSeg) = pxxc(:,2)' ;
                 end
@@ -422,7 +481,7 @@ for currFile = 1:size(FileNames,2)
 
         %% CALCULATE AVERAGE PSD
         try
-            fprintf(['Calculating the average PSD...\n']) ;
+            fprintf('Calculating the average PSD...\n') ;
             psd_ave = mean(psd,3)' ;
             psdLow_ave = mean(psdLow,3)' ;
             psdHigh_ave = mean(psdHigh,3)' ;
@@ -474,7 +533,7 @@ for currFile = 1:size(FileNames,2)
         
         %% PRINT OUT INDIVIDUAL PSD FILES (IF ENABLED)
         if params.method(1)
-            fprintf(['Saving Individual PSDs...\n']) ;
+            fprintf('Saving Individual PSDs...\n') ;
             if params.csvFormat
                 if ~isfolder([srcDir filesep 'generatePower' filesep ...
                         'PSD_IndivTrials' filesep strrep(FileNames{currFile}, ...
@@ -548,9 +607,9 @@ for currFile = 1:size(FileNames,2)
                 CIsaveName, 'WriteRowNames', true, 'QuoteStrings', true) ;
         end
 
-        % SAVE INFOR FOR ALLSUBS_PSD
+        % SAVE INFO FOR ALLSUBS_PSD
         for i=1:size(params.rois,2)
-            allSubs_PSD{1, i} = [allSubs_PSD{i} mean(allSubs{currFile,2}(:, ...
+            subLvl_PSD{1, i} = [subLvl_PSD{i} mean(allSubs{currFile,2}(:, ...
                 chanIndxs{1,i}),2)] ;
         end
         
@@ -575,8 +634,8 @@ for currFile = 1:size(FileNames,2)
                         % For each segment/trial, calculate the bandpower.
                         for currSeg=1:EEG.trials
                             powerBand = bandpower(psd(setdiff(chanIndxs{currROI}, ...
-                                zeroChanIndxs), :, currSeg)', f, [bandMin ...
-                                bandMax], 'psd') ;
+                                zeroChanIndxs), :, currSeg)', f, [f(bandMin) ...
+                                f(bandMax)], 'psd') ;
                             allSubs{currFile,3}{currBand,currROI} = ...
                                 [allSubs{currFile,3}{currBand, currROI}; ...
                                 [powerBand mean(powerBand)]] ;
@@ -584,7 +643,7 @@ for currFile = 1:size(FileNames,2)
                     end
                     
                     powerBand = bandpower(psd_ave(:, setdiff(chanIndxs{currROI}, ...
-                        zeroChanIndxs)), f, [bandMin bandMax], 'psd') ;
+                        zeroChanIndxs)), f, [f(bandMin) f(bandMax)], 'psd') ;
                     allSubs{currFile,3}{currBand,currROI} = [allSubs{currFile, ...
                         3}{currBand,currROI}; [powerBand mean(powerBand)]] ;
                     clear('powerBand') ;
@@ -593,7 +652,7 @@ for currFile = 1:size(FileNames,2)
     
             % PRINT OUT BANDS
             rowNames = {} ;
-            for i=1:EEG.trials; rowNames = [rowNames; ['epoch_' num2str(i)]]; end %#ok<AGROW> 
+            for i=1:EEG.trials; rowNames = [rowNames; ['epoch_' num2str(i)]]; end  
             rowNames = [rowNames; 'average_epoch'] ;
             if params.bands.method(1)
                 if params.bands.csvFormat
@@ -663,24 +722,24 @@ for currFile = 1:size(FileNames,2)
                     tempBand = [tempBand allSubs{currFile,3}{i, currROI}(end,:)] ;
                     if currFile == 1
                         tempName_chans = {} ;
-                        for j=1:size(params.rois{2,currROI},2)
+                        for j=1:size(allSubs{currFile,3}{1, currROI},2)-1 % NEEDS TO BE BASED ON CHANNELS
                             tempName_chans = [tempName_chans {[params.bands.vals{i,1} ...
-                                '_' params.rois{2,currROI}{j}]}] ;
+                                '_' varNames{chanIndxs{currROI}(j)}]}] ;
                         end
                         tempName = [tempName [tempName_chans, {[params.bands.vals{i,1} ...
                             '_ROIave']}]] ;
                     end
                 end
-                allSubs_bandpower{1,currROI} = [allSubs_bandpower{1,currROI}; tempBand] ;
+                subLvl_bandpower{1,currROI} = [subLvl_bandpower{1,currROI}; tempBand] ;
                 if currFile == 1
-                    allSubs_bandpower{2,currROI} = [allSubs_bandpower{2,currROI}; tempName] ;
+                    subLvl_bandpower{2,currROI} = [subLvl_bandpower{2,currROI}; tempName] ;
                 end
             end
         end
     
         %% CALCULATE SPECPARAM
         if params.specparam.on
-            fprintf(['Calculating specparam...\n']) ;
+            fprintf('Calculating specparam...\n') ;
             allSubs{currFile,4} = cell(params.specparam.method(1) * ...
                 EEG.trials+params.specparam.method(2), size(chanIndxs,2)) ;
 
@@ -712,11 +771,12 @@ for currFile = 1:size(FileNames,2)
                     filesep strrep(FileNames{currFile}, '.set', '_figures')]) ;
             end
             % Seperate "all" roi
-            if size(params.rois,2) > 1 && any(ismember(params.rois(1,:), 'all'))
-                filteredROIindxs = setdiff(1:size(params.rois,2), ...
-                    find(strcmpi(params.rois(1,:), 'all'))) ;
-            else; filteredROIindxs = 1:size(params.rois,2) ;
-            end
+%             if size(params.rois,2) > 1 && any(ismember(params.rois(1,:), 'all'))
+%                 filteredROIindxs = setdiff(1:size(params.rois,2), ...
+%                     find(strcmpi(params.rois(1,:), 'all'))) ;
+%             else; filteredROIindxs = 1:size(params.rois,2) ;
+%             end
+            filteredROIindxs = 1:size(params.rois,2) ;
 
             % CREATE A BASE VARIABLE NAME SET THAT CAN BE USED OR ADAPTED DEPENDING ON
             % EXPORT TABLE FORMAT: [aper_offset, aper_exponent, peak#_centerFreq,
@@ -815,7 +875,7 @@ for currFile = 1:size(FileNames,2)
                         end
                         sp_outCols_chan = cell(1, size(sp_outCols_orig,2)) ;
                         if currChan > roiSize-1; addOn = 'Average' ;
-                        else; addOn = params.rois{2,filteredROIindxs(currROI)}{currChan} ;
+                        else; addOn = varNames{chanIndxs{filteredROIindxs(currROI)}(currChan)} ;
                         end
                         for i=1:size(sp_outCols_orig,2)
                             sp_outCols_chan{1,i} = [addOn '_' sp_outCols_orig{1,i}] ;
@@ -852,9 +912,9 @@ for currFile = 1:size(FileNames,2)
                         sp_allMets_all = [sp_allMets_all sp_allMets] ;
                     end
                     if currFile == 1
-                        allSubs_specparam{2,currROI} = sp_outCols ;
+                        subLvl_specparam{2,currROI} = sp_outCols ;
                     end
-                    allSubs_specparam{1,currROI} = [allSubs_specparam{1,currROI}; sp_allMets(end,:)] ;
+                    subLvl_specparam{1,currROI} = [subLvl_specparam{1,currROI}; sp_allMets(end,:)] ;
                 end
                 if ~params.specparam.splitROI.on
                     writetable(array2table(sp_allMets_all, 'VariableNames', ...
@@ -864,15 +924,16 @@ for currFile = 1:size(FileNames,2)
             else
                 if currFile==1
                     for currROI=1:size(filteredROIindxs,2)
+                        roiSize = size(allSubs{currFile,4}{1, filteredROIindxs(currROI)},2) ;
                         for currChan=1:roiSize
                             sp_outCols_chan = cell(1, size(sp_outCols_orig,2)) ;
                             if currChan > roiSize-1; addOn = 'aveROI' ;
-                            else; addOn = params.rois{2,filteredROIindxs(currROI)}{currChan} ;
+                            else; addOn = varNames{chanIndxs{filteredROIindxs(currROI)}(currChan)} ;
                             end
                             for i=1:size(sp_outCols_orig,2)
                                 sp_outCols_chan{1,i} = [addOn '_' sp_outCols_orig{1,i}] ;
                             end
-                            allSubs_specparam{2,currROI} = [allSubs_specparam{2,currROI} sp_outCols_chan] ;
+                            subLvl_specparam{2,currROI} = [subLvl_specparam{2,currROI} sp_outCols_chan] ;
                         end
                     end
                 end
@@ -897,17 +958,18 @@ for currFile = 1:size(FileNames,2)
                             '.set', '_aveSpecparam.csv')], '.csv') ;
                 end
             
-                if params.specparam.splitROI.on
+%                 if params.specparam.splitROI.on
                     sp_outMat = [] ;
-                end
+%                 end
                 sp_outRows = [] ;
                 for currROI=1:size(filteredROIindxs,2)
+                    roiSize = size(allSubs{currFile,4}{1, filteredROIindxs(currROI)},2) ;
                     % DO MATRIX CALCULATION STUFF
                     % Aperiodic Info
                     currCell = {allSubs{currFile,4}{end, filteredROIindxs(currROI)}.aperiodic_params} ;
                     sp_aper = [] ;
                     for i=1:size(currCell,2)
-                        sp_aper = [sp_aper; currCell{i}] ;                     %#ok<AGROW> 
+                        sp_aper = [sp_aper; currCell{i}] ;                      
                     end
                     
                     % Peak Info
@@ -985,7 +1047,7 @@ for currFile = 1:size(FileNames,2)
                         for i=1:size(sp_outMat_temp,1)
                             tempBand = [tempBand sp_outMat_temp{i,:}] ;
                         end
-                        allSubs_specparam{1,currROI} = [allSubs_specparam{1,...
+                        subLvl_specparam{1,currROI} = [subLvl_specparam{1,...
                             currROI}; tempBand] ;
                     end
                     % Visualizations for chans
@@ -997,8 +1059,8 @@ for currFile = 1:size(FileNames,2)
                         plotSpecparam(allSubs{currFile,4}{end,filteredROIindxs(currROI)}(i), ...
                             params.specparam.vis) ;
                         if i < size(allSubs{currFile,4}{end, filteredROIindxs(currROI)},2)
-                            figName2 = strrep(figName, 'CHAN', params.rois{2, ...
-                                filteredROIindxs(currROI)}{i}) ;
+                            figName2 = strrep(figName, 'CHAN', ...
+                                varNames{chanIndxs{filteredROIindxs(currROI)}(i)}) ;
                         else; figName2 = strrep(figName, 'CHAN', 'average') ;
                         end
                         saveas(gcf, [strrep(figName2, 'ROI', params.rois{3, ...
@@ -1014,32 +1076,51 @@ for currFile = 1:size(FileNames,2)
 
         end
     catch ME
+        name = {ME.stack.name} ;
+        line = {ME.stack.line} ;
+        if size(line,2) > 1
+            errList = [sprintf('Line %d in %s; ', line{1:end-1}, ...
+                name{1:end-1}) 'Line ' num2str(line{end}) ' in ' name{end}] ;
+        else; errList = ['Line ' num2str(line{1}) ' in ' name] ;
+        end
+        errorLog = [errorLog; {FileNames{currFile}, ME.message, errList}] ;
     end
+end
+
+%% SAVE ERROR LOG
+% If there were any errors while running HAPPE, save an error log so the
+% user can troubleshoot.
+if ~isempty(errorLog)
+    fprintf('Saving error log...\n') ;
+    errTabName = helpName(['HAPPE_errorLog_' datestr(now, 'dd-mm-yyyy') ...
+        '.csv'], '.csv') ;
+    writetable(cell2table(errorLog, 'VariableNames', {'File', ...
+        'Error Message' 'Stack Trace'}), errTabName) ;
 end
 
 %% PRINT OUT ALLSUBS FILE
 if ~isfolder([srcDir filesep 'generatePower' filesep 'allSubs'])
     mkdir([srcDir filesep 'generatePower' filesep 'allSubs']) ;
 end
-fprintf(['Saving information from all files...\n']) ;
+fprintf('Saving information from all files...\n') ;
 for currROI=1:size(params.rois,2)
-    writetable(array2table(allSubs_PSD{currROI}(freqMin:freqMax,:), ...
+    writetable(array2table(subLvl_PSD{currROI}(freqMin:freqMax,:), ...
         'VariableNames', FileNames, 'RowNames', cellstr(num2str(f(freqMin:freqMax)))), ...
         helpName([srcDir filesep 'generatePower' filesep 'allSubs' filesep ...
         'allSubs_PSD_' params.rois{3, currROI} '.csv'], '.csv'), ...
         'WriteRowNames', true, 'QuoteStrings', true) ;
 
     if params.bands.on
-        writetable(array2table(allSubs_bandpower{1,currROI}, 'VariableNames', ...
-            allSubs_bandpower{2,currROI}, 'RowNames', FileNames'), helpName([srcDir ...
+        writetable(array2table(subLvl_bandpower{1,currROI}, 'VariableNames', ...
+            subLvl_bandpower{2,currROI}, 'RowNames', FileNames'), helpName([srcDir ...
             filesep 'generatePower' filesep 'allSubs' filesep 'allSubs_bandpower_' ...
             params.rois{3, currROI} '.csv'], '.csv'), 'WriteRowNames', true, ...
             'QuoteStrings', true) ;
     end
 
     if params.specparam.on && ismember(currROI, filteredROIindxs)
-        writetable(array2table(allSubs_specparam{1,currROI}, 'VariableNames', ...
-            allSubs_specparam{2,currROI}, 'RowNames', FileNames'), ...
+        writetable(array2table(subLvl_specparam{1,currROI}, 'VariableNames', ...
+            subLvl_specparam{2,currROI}, 'RowNames', FileNames'), ...
             helpName([srcDir filesep 'generatePower' filesep 'allSubs' ...
             filesep 'allSubs_specparam_' params.rois{3,currROI} '.csv'], ...
             '.csv'), 'WriteRowNames', true, 'QuoteStrings', true) ;
@@ -1050,9 +1131,9 @@ end
 %% SUPPORT FUNCTIONS
 % DETERMINE IF CALCULATING FOR INDIVIDUAL, AVERAGE, OR BOTH TRIALS
 function [method, csvFormat] = determ_IndivAveBoth()
-    fprintf(['Calculate power:\n  individual = By individual epochs\n' ...
-        '  average = For the average over epochs\n  both = Both individual' ...
-        ' epochs and average over epochs\n']) ;
+    fprintf(['Calculate power:\n  individual = By individual trials/segments\n' ...
+        '  average = For the average over trials/segments\n  both = Both ' ...
+        'individual trials/segments and average over trials/segments\n']) ;
     while true
         ui = input('> ','s') ;
         if strcmpi(ui, 'individual'); method = [1,0]; break;
@@ -1063,10 +1144,10 @@ function [method, csvFormat] = determ_IndivAveBoth()
         end
     end
     if method(1)
-        fprintf(['Print the individual trials as seperate .csv files or ' ...
-            'as\nsheets in a single Excel file?\n  csv = Output seperate ' ...
-            '.csv files\n  sheets = Output a single Excel file with ' ...
-            'multiple sheets\n']) ;
+        fprintf(['Print the individual trials/segments as seperate .csv ' ...
+            'files or as\nsheets in a single Excel file?\n  csv = Output ' ...
+            'seperate .csv files\n  sheets = Output a single Excel file ' ...
+            'with multiple sheets\n']) ;
         while true
             ui = input('> ','s') ;
             if strcmpi(ui, 'csv'); csvFormat = 1; break;
@@ -1081,7 +1162,7 @@ end
 
 % LIST OUT PARAMETER SET
 function genPower_listParams(params)
-    fprintf('Calculate PSD for Individual Trials: ') ;
+    fprintf('Calculate PSD for Individual Trials/Segments: ') ;
     if params.method(1); fprintf('On\n - Output Format: ') ;
         if params.csvFormat; fprintf('Seperate .csv files\n') ;
         else; fprintf('Sheets in an Excel file\n') ;
@@ -1089,15 +1170,15 @@ function genPower_listParams(params)
     else; fprintf('Off\n') ;
     end
     
-    fprintf('Calculate PSD for Average of Trials: ') ;
+    fprintf('Calculate PSD for Average of Trials/Segments: ') ;
     if params.method(2); fprintf('On\n') ;
     else; fprintf('Off\n') ;
     end
     
     fprintf('Limit PSD Frequencies: ') ;
     if params.freqs.limit
-        fprintf(['On\n - Minimum: ' num2str(params.freqs.min) ' Hz\n - Maximum: ' ...
-            num2str(params.freqs.max) ' Hz\n']) ;
+        fprintf(['On\n - Minimum: ' num2str(params.freqs.min) ' Hz\n - ' ...
+            'Maximum: ' num2str(params.freqs.max) ' Hz\n']) ;
     else; fprintf('Off\n') ;
     end
     
@@ -1139,14 +1220,17 @@ function genPower_listParams(params)
     fprintf('Calculate Specparam: ') ;
     if params.specparam.on
         fprintf(['On\n - Python Version: ' num2str(params.specparam.pyVers) ...
-            '\n - Calculate for Individual Trials: ']) ;
+            '\n - Calculate for Individual Trials/Segments: ']) ;
         if params.specparam.method(1); fprintf('On\n'); else; fprintf('Off\n') ; end
-        fprintf(' - Calculate for Average of Trials: ');
+        fprintf(' - Calculate for Average of Trials/Segments: ');
         if params.specparam.method(2); fprintf('On\n'); else; fprintf('Off\n') ; end
         fprintf(' - Visualizations: ')
         if params.specparam.vis; fprintf('On\n'); else; fprintf('Off\n') ; end
-        fprintf([' - Python Version: ' params.specparam.pyVers '\n - ' ...
-            'Spectrum Limits: ' num2str(params.specparam.min) ' Hz - ' ...
+        if ispc; fprintf([' - Python Version: ' params.specparam.pyVers '\n']) ;
+        else; fprintf([' - Path to Python Executable: ' params.specparam.pyVers ...
+                '/n']) ;
+        end
+        fprintf([' - Spectrum Limits: ' num2str(params.specparam.min) ' Hz - ' ...
             num2str(params.specparam.max) ' Hz\n - Peak Width Limits: ' ...
             num2str(params.specparam.settings.peak_width_limits(1)) ' - ' ...
             num2str(params.specparam.settings.peak_width_limits(2)) '\n - ' ...
