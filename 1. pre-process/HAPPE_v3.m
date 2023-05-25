@@ -28,6 +28,12 @@
 %   Cleanline by Tim Mullen (as an EEGLAB plug-in): Mullen, T. (2012). 
 %       NITRC: CleanLine: Tool/Resource Info. Available online at: 
 %       http://www.nitrc.org/projects/cleanline.
+%   ECG Reduction (if using ECGone): Isler JR, Pini N, Lucchini M, 
+%       Shuffrey LC, Mitsuyama M, Welch MG, Fifer WP, Stark RI, Myers MM. 
+%       A Novel Method for ECG Artifact Removal from EEG without 
+%       Simultaneous ECG. Annu Int Conf IEEE Eng Med Biol Soc. 2022 
+%       %Jul;2022:3582-3585. doi: 10.1109/EMBC48229.2022.9871252. 
+%       PMID: 36086135.
 %   FASTER segment-level channel interpolation code (if interpolating 
 %       within segments): Nolan, H., Whelan, R., & Reilly, R.B. (2010). 
 %       FASTER: Fully Automated Statistical Thresholding for EEG artifact
@@ -43,15 +49,16 @@
 %       Toolboxes for Reference Electrode Standardization Technique (REST) 
 %       of Scalp EEG. Frontiers in Neuroscience, 2017:11(601).
 %
-% HAPPE includes code adapted from third-party software. See the relevant 
-% function for further documentation:
+% HAPPE includes code adapted from third-party software/scripts. 
+% See the relevant function for further documentation:
 %   butterFilt.m adapted from ERPLAB (Lopez-Calderon & Luck, 2014)
 %   adaptedREST.m adapted from REST (Yao, 2001), (Dong et al., 2019)
+%   ECGone.m (Isler et al., 2022)
 %
 % Any code that is not part of the third-party dependencies is released
 % under the GNU General Public License version 3.
 %
-% Copyright 2018-2022 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
+% Copyright 2018-2023 Alexa Monachino, Kelsie Lopez, Laurel Gabard-Durnam
 %
 % This program is free software: you can redistribute it and/or modify it
 % under the terms of the GNU General Public License (version 3) as
@@ -254,13 +261,14 @@ fprintf('Output folders created.\n') ;
 fprintf('Gathering files...\n') ;
 cd(srcDir) ;
 % DETERMINE FILE EXTENSION USING USER LOAD INFO
-if params.loadInfo.inputFormat == 1; inputExt = '.mat' ;
-elseif params.loadInfo.inputFormat == 2; inputExt = '.raw' ;
-elseif params.loadInfo.inputFormat == 3; inputExt = '.set' ;
-elseif params.loadInfo.inputFormat == 4; inputExt = '.cdt' ;
-elseif params.loadInfo.inputFormat == 5; inputExt = '.mff' ;
-elseif params.loadInfo.inputFormat == 6; inputExt = '.EDF' ;
-elseif params.loadInfo.inputFormat == 7; inputExt = '.set' ;
+switch params.loadInfo.inputFormat
+    case 1; inputExt = '.mat' ;
+    case 2; inputExt = '.raw' ;
+    case 3; inputExt = '.set' ;
+    case 4; inputExt = '.cdt' ;
+    case 5; inputExt = '.mff' ;
+    case 6; inputExt = '.EDF' ;
+    case 7; inputExt = '.set' ;
 end
 % COLLECT FILE NAMES: gather the names of all the files with the relevant
 % file extension in the directory indicated by the user. If no files are
@@ -328,110 +336,99 @@ for currFile = 1:length(FileNames)
             %% LOAD AND VALIDATE RAW FILE
             fprintf(['Loading ' FileNames{currFile} '...\n']) ;
             try
-                % .MAT FILES
-                if params.loadInfo.inputFormat == 1
-                    % Net Station:
-                    if params.loadInfo.NSformat
-                        load(FileNames{currFile}) ;
-                        % Use known information about Net Station sampling 
-                        % rate variable names to determine the sampling 
-                        % rate of the file.
-                        srate = intersect(who, {'samplingRate', 'EEGSamplingRate'}) ;
-                        srate = double(eval(srate{1})) ;
-                        % Use the potential variable names given by the user to
-                        % determine the data variable.
-                        eegVName = intersect(who, params.loadInfo.NSvarNames) ;
-                        % Try to load the EEG using an EGI Net Station EEGLAB
-                        % plugin. If unable to load the file, throws an error.
-                        % Specifically looks for MATLAB:badsubscript.
-                        try EEGraw = pop_importegimat(FileNames{currFile}, ...
-                                srate, 0.00, eegVName{1}) ;
-                        catch ME
-                            if strcmp(ME.identifier, 'MATLAB:badsubscript')
-                                fprintf(['Sorry, could not read the variable' ...
-                                    ' name of the EEG data. Please check your' ...
-                                    ' file.\n']) ;
+                switch params.loadInfo.inputFormat
+                    % .MAT
+                    case 1
+                        % NetStation Format:
+                        if params.loadInfo.NSformat
+                            load(FileNames{currFile}) ;
+                            % Use known information about Net Station sampling 
+                            % rate variable names to determine the sampling 
+                            % rate of the file.
+                            srate = intersect(who, {'samplingRate', 'EEGSamplingRate'}) ;
+                            srate = double(eval(srate{1})) ;
+                            % Use the potential variable names given by the user to
+                            % determine the data variable.
+                            eegVName = intersect(who, params.loadInfo.NSvarNames) ;
+                            % Try to load the EEG using an EGI Net Station EEGLAB
+                            % plugin. If unable to load the file, throws an error.
+                            % Specifically looks for MATLAB:badsubscript.
+                            try EEGraw = pop_importegimat(FileNames{currFile}, ...
+                                    srate, 0.00, eegVName{1}) ;
+                            catch ME
+                                if strcmp(ME.identifier, 'MATLAB:badsubscript')
+                                    fprintf(['Sorry, could not read the variable' ...
+                                        ' name of the EEG data. Please check your' ...
+                                        ' file.\n']) ;
+                                end
+                                rethrow(ME) ;
                             end
-                            rethrow(ME) ;
-                        end    
-                    % Matrix:
-                    else
-                        % If all the files have the same sampling rate, use
-                        % the single user specified value. Otherwise, load 
-                        % the table of sampling rates specified by the user
-                        % and locate the corresponding value from the table
-                        % using the file name.
-                        if params.loadInfo.srate.same
-                            srate = params.loadInfo.srate.val ;
+                        % Matrix:
                         else
-                            srateTable = table2cell(readtable(params.loadInfo.srate.file)) ;
-                            srate = srateTable{contains(list, ...
-                                FileNames{currFile}), 2} ;
+                            % If all the files have the same sampling rate, use
+                            % the single user specified value. Otherwise, load 
+                            % the table of sampling rates specified by the user
+                            % and locate the corresponding value from the table
+                            % using the file name.
+                            if params.loadInfo.srate.same
+                                srate = params.loadInfo.srate.val ;
+                            else
+                                srateTable = table2cell(readtable(params.loadInfo.srate.file)) ;
+                                srate = srateTable{contains(list, ...
+                                    FileNames{currFile}), 2} ;
+                            end
+                            % Use the built-in EEGLAB function to load the
+                            % data. Uses the sampling rate determined above and
+                            % the user-specified channel locations. If the user
+                            % did not specify any channel locations, is still
+                            % able to load successfully.
+                            EEGraw = pop_importdata('dataformat', 'matlab', ...
+                                'data', FileNames{currFile}, 'srate', srate, ...
+                                'chanlocs', params.loadInfo.chanlocs.file) ;
                         end
-                        % Use the built-in EEGLAB function to load the
-                        % data. Uses the sampling rate determined above and
-                        % the user-specified channel locations. If the user
-                        % did not specify any channel locations, is still
-                        % able to load successfully.
-                        EEGraw = pop_importdata('dataformat', 'matlab', ...
-                            'data', FileNames{currFile}, 'srate', srate, ...
-                            'chanlocs', params.loadInfo.chanlocs.file) ;
-                    end
-                    % If task data, import event information using the file
-                    % indicated by the user.
-                    if params.paradigm.task
-                        cd(params.loadInfo.eventLoc) ;
-                        EEGraw = pop_importevent(EEGloaded, 'append', 'no', ...
-                            'event', StimNames{currFile}, 'fields', {'type', ...
-                            'latency', 'status'}, 'skipline', 1, 'timeunit', ...
-                            1E-3, 'align', NaN) ;
-                        origEvents = EEGraw.urevent ;
-                        events = EEGraw.event ;
-                    end    
-                else
-                % ---------------------------------------------------------
-                % .RAW FILES
-                    if params.loadInfo.inputFormat == 2
-                        EEGraw = pop_readegi(FileNames{currFile}, [], [], ...
-                            'auto') ;
-                % ---------------------------------------------------------
-                % .SET FILES
-                    elseif params.loadInfo.inputFormat == 3
+                        % If task data, import event information using the file
+                        % indicated by the user.
+                        if params.paradigm.task
+                            cd(params.loadInfo.eventLoc) ;
+                            EEGraw = pop_importevent(EEGloaded, 'append', 'no', ...
+                                'event', StimNames{currFile}, 'fields', {'type', ...
+                                'latency', 'status'}, 'skipline', 1, 'timeunit', ...
+                                1E-3, 'align', NaN) ;
+                            origEvents = EEGraw.urevent ;
+                            events = EEGraw.event ;
+                        end
+                    % .RAW FILES
+                    case 2; EEGraw = pop_readegi(FileNames{currFile}, [], ...
+                            [], 'auto') ;
+                    % .SET FILES
+                    case 3
                         EEGraw = load('-mat', FileNames{currFile}) ;
                         if isfield(EEGraw, 'EEG'); EEGraw = EEGraw.EEG; end
-                % ---------------------------------------------------------
-                % .CDT FILES
-                    elseif params.loadInfo.inputFormat == 4
-                        EEGraw = loadcurry([srcDir filesep ...
+                    % .CDT FILES
+                    case 4; EEGraw = loadcurry([srcDir filesep ...
                             FileNames{currFile}], 'CurryLocation', 'false') ;
-                % ---------------------------------------------------------
-                % .MFF FILES
-                    elseif params.loadInfo.inputFormat == 5
-                        EEGraw = pop_mffimport(FileNames{currFile} , ...
+                    % .MFF FILES
+                    case 5; EEGraw = pop_mffimport(FileNames{currFile} , ...
                             params.loadInfo.typeFields, 0, 0) ;
-                % ---------------------------------------------------------
-                % .EDF FILES
-                    elseif params.loadInfo.inputFormat == 6
-                        EEGraw = pop_biosig(FileNames{currFile}, ...
+                    % .EDF FILES
+                    case 6; EEGraw = pop_biosig(FileNames{currFile}, ...
                             'blockepoch', 'off') ;
-                % ---------------------------------------------------------
-                % .BDF->.SET
-                    elseif params.loadInfo.inputFormat == 7
-                        EEGraw = pop_loadset('filename', FileNames{currFile}) ;
-                    end
-                % ---------------------------------------------------------
+                    % .BDF->.SET
+                    case 7; EEGraw = pop_loadset('filename', FileNames{currFile}) ;
+                end
+
                 % Determine the sampling rate from the loaded EEG. If task
                 % related, save the events from the loaded file in its own
                 % variable.
-                    srate = double(EEGraw.srate) ;
-                    if params.paradigm.task; events = EEGraw.event ; end
-                end
-                % ---------------------------------------------------------
+                srate = double(EEGraw.srate) ;
+                if params.paradigm.task; events = EEGraw.event ; end
+
                 % Validate the loaded file using EEGLAB's checkset function
                 fprintf('Validating file...\n') ;
                 EEGraw.setname = 'rawEEG' ;
                 EEG = eeg_checkset(EEGraw) ;
                 dataQC{currFile, 1} = EEG.xmax ;
+
             % If unable to load the file, indicate this to the user via the
             % command line and throw an error.
             catch ME
@@ -444,24 +441,25 @@ for currFile = 1:length(FileNames)
             % input format. Please note that for .raw files, if exported
             % incorrectly from netstation, this will not work!
             if params.loadInfo.correctEGI
-                fprintf('Correcting Channels...\n') ;
-                % LOAD THE CHANNEL LOCATIONS FILE USING THE LAYOUT
-                % INFORMATION PARAMETERS
-                if params.loadInfo.layout(1) == 1
-                    if params.loadInfo.layout(2) == 64
+                fprintf('Correcting EGI Channel Locations...\n') ;
+                switch params.loadInfo.layout(1)
+                    % LOAD THE CHANNEL LOCATIONS FILE USING THE LAYOUT
+                    % INFORMATION PARAMETERS
+                    case 1
+                        if params.loadInfo.layout(2) == 64
                         params.loadInfo.chanlocs.file = [happeDir filesep ...
                             'files' filesep 'acquisition_layout_information' ...
                             filesep 'GSN65v2_0.sfp'] ;
-                    else; error('Invalid sensor layout selection.') ;
-                    end
-                elseif params.loadInfo.layout(1) == 2
-                    if ismember(params.loadInfo.layout(2), [32, 64, 128, 256])
-                        params.loadInfo.chanlocs.file = [happeDir filesep ...
-                            'files' filesep 'acquisition_layout_information' ...
-                            filesep 'GSN-HydroCel-' ...
-                            num2str(params.loadInfo.layout(2)+1) '.sfp'] ;
-                    else; error('Invalid sensor layout selection.') ;     
-                    end
+                        else; error('Invalid sensor layout selection.') ;
+                        end
+                    case 2
+                        if ismember(params.loadInfo.layout(2), [32, 64, 128, 256])
+                            params.loadInfo.chanlocs.file = [happeDir filesep ...
+                                'files' filesep 'acquisition_layout_information' ...
+                                filesep 'GSN-HydroCel-' ...
+                                num2str(params.loadInfo.layout(2)+1) '.sfp'] ;
+                        else; error('Invalid sensor layout selection.') ;     
+                        end
                 end
                 % CORRECT THE CHANNELS USING EEGLAB FUNCTIONALITY
                 EEG = pop_chanedit(EEG, EEG.chanlocs, 'load', ...
@@ -541,8 +539,7 @@ for currFile = 1:length(FileNames)
             % fails during this step, alert the user that processing failed
             % during the line noise step in the command window and rethrow
             % the error to proceed to the next file.
-            try
-                [EEG, lnMeans] = happe_reduceLN(EEG, params.lineNoise, ...
+            try [EEG, lnMeans] = happe_reduceLN(EEG, params.lineNoise, ...
                     lnMeans) ;
                 EEG.setname = [EEG.setname '_ln'] ;
             catch ME
@@ -594,6 +591,17 @@ for currFile = 1:length(FileNames)
                 dataQC{currFile,4} = dataQC{currFile,3}/dataQC{currFile,2}*100;
                 dataQC{currFile,5} = 'NA' ;
             end
+
+            %% ECGONE
+            % If ECGone is enabled, remove significant ECG artifact through
+            % the ECGone function (see function for further documentation),
+            % as adapted from the method created by Isler et al., 2022.
+            try EEG = ECGone(EEG, params.ecgone) ;
+            catch ME
+                fprintf(2, ['ERROR: ECGone failed. Proceeding to wavelet ' ...
+                    'thresholding...\n']) ;
+%                 rethrow(ME) ;
+            end
             
             %% WAVELET THRESHOLDING
             % Attempt to wavelet threshold using the happe_wavThresh
@@ -616,7 +624,7 @@ for currFile = 1:length(FileNames)
             % Save the wavelet-thresholded EEG as an intermediate output.
             pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
                 inputExt, '_wavclean.set')) ;
-
+            
         else
             %% LOAD AND VALIDATE PROCESSED FILE
             try
@@ -625,9 +633,8 @@ for currFile = 1:length(FileNames)
                 % Use the raw file name. Collect the original number of
                 % user-selected channels from this file, then clear the
                 % dataset.
-                EEGloaded = pop_loadset('filename', ...
-                    strrep(FileNames{currFile}, inputExt, ...
-                    '_lnreduced.set'), 'filepath', [srcDir filesep ...
+                EEGloaded = pop_loadset('filename', strrep(FileNames{currFile}, ...
+                    inputExt, '_lnreduced.set'), 'filepath', [srcDir filesep ...
                     dirNames{contains(dirNames, 'intermediate_processing')}]) ;
                 dataQC{currFile, 2} = size(EEGloaded.data,1) ;
                 origChans = EEGloaded.chanlocs ;
@@ -636,15 +643,14 @@ for currFile = 1:length(FileNames)
                 % LOAD PRE-SEGMENTED PROCESSED DATA:
                 % Load the wavelet-thresholded data. Using the raw file to 
                 % locate and load the correct file.
-                if ranMuscIL
-                    EEGloaded = pop_loadset('filename', strrep(FileNames{currFile}, ...
-                        inputExt, '_muscILcleaned.set'), 'filepath', [srcDir ...
-                        filesep dirNames{contains(dirNames, ...
-                        'muscIL')}]) ;
-                else
-                    EEGloaded = pop_loadset('filename', strrep(FileNames{currFile}, ...
-                        inputExt, '_wavclean.set'), 'filepath', [srcDir ...
-                        filesep dirNames{contains(dirNames, ...
+                if ranMuscIL; EEGloaded = pop_loadset('filename', ...
+                        strrep(FileNames{currFile}, inputExt, ...
+                        '_muscILcleaned.set'), 'filepath', [srcDir filesep ...
+                        dirNames{contains(dirNames, 'muscIL')}]) ;
+                else; EEGloaded = pop_loadset('filename', ...
+                        strrep(FileNames{currFile}, inputExt, ...
+                        '_wavclean.set'), 'filepath', [srcDir filesep ...
+                        dirNames{contains(dirNames, ...
                         'wavelet_cleaned_continuous')}]) ;
                 end
                         

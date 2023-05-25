@@ -7,6 +7,9 @@
 function outEEG = ECGone(inEEG, params)
 %[outEEG, template, peakIndxs] = ECGone(inEEG, params, varargin)
 %% VALIDATE VARARGIN
+% vis = 0 ;
+tolerance = 10 ;
+zsqCutOff = 1 ;
 
 %% DETERMINE ECG CHANNEL/CHANNELS WITH ARTIFACT
 % Get THE index/indicies for ECG based on the EEG's channel locations and
@@ -59,27 +62,29 @@ for currEpoch=1:size(EEG.data,3)
     [peaks, peakIndxs] = findpeaks(ECGchan, 'MINPEAKDISTANCE', ...
         round(inEEG.srate*params.peakWinSize)) ;
 
-    % Ensure the peak is not on the edges - ensure that is is doing what
-    % you actually want it to do ***
+    % Ensure the peak is not on the edges
     peakIndxs = peakIndxs(2:end-1) ;
 
     % If approximating the channel from artifact, confirm the data is
     % sufficiently "peaky". If not, end the run via error.
     if ~params.ECGchan.inc
-        if median((peaks - median(ECGchan))./median(ECGchan)) < 10
+        outlierIndxs = find(peaks > (1.5*iqr(peaks) + median(peaks, 'omitnan')) ...
+            | peaks < (-1.5*iqr(peaks) + median(peaks, 'omitnan'))) ;
+
+        if median((peaks - median(ECGchan))./median(ECGchan)) < params.peaky
             fprintf('Insufficient ECG artifact to create template.\n') ;
             continue ;
         end
     end
 
     %% PLOT THE ECG CHANNEL AND ITS PEAKS, if visualizations are enabled
-    if vis % ***
-        figure ;
-        hold off ;
-        plot(ECGchan) ;
-        hold on ;
-        plot(peakIndxs, ECGchan(peakIndxs), 'r*') ;
-    end
+%     if vis % ***
+%         figure ;
+%         hold off ;
+%         plot(ECGchan) ;
+%         hold on ;
+%         plot(peakIndxs, ECGchan(peakIndxs), 'r*') ;
+%     end
 
     %% CREATE TEMPLATE
     % Calculate the number of samples in 120 milliseconds (the estimated
@@ -124,7 +129,7 @@ for currEpoch=1:size(EEG.data,3)
     indxMax = nan(size(epochData, 1),1) ;
     for currChan = 1:size(epochData, 1)
         indxMax(currChan) = median(find(abs(template(:,currChan)) == ...
-            max(abs(template(:,currChan)))), 'omitnan') ;                   % As originally written doesn't work? Added abs to enable correct finding but also, why abs?
+            max(abs(template(:,currChan)))), 'omitnan') ;                  
     end
     indxMax = round(indxMax) ;
 
@@ -145,8 +150,9 @@ for currEpoch=1:size(EEG.data,3)
     end
     
     %% COMPLETE A SECOND PASS, if signal was approximated from artifact
-    if params.ECGchan.inc
+    if ~params.ECGchan.inc
         % CALCULATE RESIDUALS
+        % Need to build in safety for if +/- tolerance is out of bounds
         resids = zeros(length(peakIndxs), size(epochData,1)) ;
         for currIndx = 1:length(peakIndxs)
             resids(currIndx,:) = var(zscore(epochData(:, peakIndxs(currIndx) - ...
@@ -157,14 +163,14 @@ for currEpoch=1:size(EEG.data,3)
         resids = resids' ;
 
         % PLOT RESIDUALS, if visualizations are enabled
-        if vis
-            figure ;
-            hold off;
-            imagesc(resids, [0, 100]) ;
-        end
+%         if vis
+%             figure ;
+%             hold off;
+%             imagesc(resids, [0, 100]) ;
+%         end
 
         % REMOVE OUTLIER INDICIES using residuals and z-square cutoffs
-        peakIndxs(median(resids) > zsqCutOff) = [] ;
+        peakIndxs(median(resids) > zsqCutOff) = [] ;                        %#ok<UDIM> 
 
         % END THE RUN IF ALL INDICIES ARE REMOVED
         if isempty(peakIndxs)
@@ -173,13 +179,13 @@ for currEpoch=1:size(EEG.data,3)
         end
 
         % PLOT THE ECG CHANNEL AND ITS PEAKS, if visualizations are enabled
-        if vis
-            figure ;
-            hold off ;
-            plot(ECGchan) ;
-            hold on ;
-            plot(peakIndxs, ECGchan(peakIndxs), 'r*') ;
-        end
+%         if vis
+%             figure ;
+%             hold off ;
+%             plot(ECGchan) ;
+%             hold on ;
+%             plot(peakIndxs, ECGchan(peakIndxs), 'r*') ;
+%         end
 
         % REMAKE TEMPLATE EXCUDING REMOVED INDICIES
         template = zeros(length(peakIndxs), numSamps, size(epochData, 1)) ;
@@ -209,12 +215,12 @@ for currEpoch=1:size(EEG.data,3)
         cleanedEpoch(:, peakWindIndxs) = epochData(:, peakWindIndxs) - template' ;
     end
 
-    % Plot the EEG before and after
-    if vis
-    end
-    % Plot the difference between before and after
-    if vis
-    end
+%     % Plot the EEG before and after
+%     if vis
+%     end
+%     % Plot the difference between before and after
+%     if vis
+%     end
 
     EEG.data(:,:,currEpoch) = cleanedEpoch ;
 end

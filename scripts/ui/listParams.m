@@ -190,22 +190,23 @@ if isfield(params, 'badChans')
 end
 
 %% ECGone
-% if isfield(params, 'ecgone')
-%     fprintf('ECGone: ') ;
-%     if params.ecgone.on
-%         fprintf('On\n - ECG Channel: ') ;
-%         if params.ecgone.ECGchan.inc
-%             fprintf([params.ecgone.ECGchan.ID '\n']) ;
-%         else
-%             fprintf(['Proxy made from artifact in channel(s) ' ...
-%                 sprintf('%s, ', params.ecgone.ECGchan.ID{1:end-1}), ...
-%                 params.ecgone.ECGchan.ID{end} '\n']) ;
-%         end
-%         fprintf(['Peak Detection Window Length: ' num2str(params.ecgone.winSize) ...
-%             ' seconds\n']) ;
-%     else; fprintf('Off\n') ;
-%     end
-% end
+if isfield(params, 'ecgone')
+    fprintf('ECGone: ') ;
+    if params.ecgone.on
+        fprintf('On\n - ECG Channel: ') ;
+        if params.ecgone.ECGchan.inc
+            fprintf([params.ecgone.ECGchan.ID '\n']) ;
+        else
+            fprintf(['Proxy made from artifact in channel(s) ' ...
+                sprintf('%s, ', params.ecgone.ECGchan.ID{1:end-1}), ...
+                params.ecgone.ECGchan.ID{end} '\n - Artifact Threshold:' ...
+                num2str(params.ecgone.peaky) '\n']) ;
+        end
+        fprintf(['Peak Detection Window Length: ' num2str(params.ecgone.winSize) ...
+            ' seconds\n']) ;
+    else; fprintf('Off\n') ;
+    end
+end
 
 %% Legacy Wavelet
 if isfield(params, 'wavelet')

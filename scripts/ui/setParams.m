@@ -327,30 +327,35 @@ while true
     end
 
     %% ECGONE
-%     if (~preExist || strcmpi(paramChoice, 'ECGone')) && ~reprocessing
-%         fprintf('Use ECGone to reduce ECG artifact in your data? [Y/N]\n') ;
-%         params.ecgone.on = choose2('N', 'Y') ;
-%         if params.ecgone.on
-%             fprintf(['Does your data contain a dedicated ECG channel? [Y/N]' ...
-%                 '\n']) ;
-%             params.ecgone.ECGchan.inc = choose2('N', 'Y') ;
-%             if params.ecgone.ECGchan.inc
-%                 fprintf('Dedicated ECG channel name:\n') ;
-%                 params.ecgone.ECGchan.ID = input('> ', 's') ;
-%             else
-%                 fprintf(['Enter the channel names containing ECG artifact' ...
-%                     ' to create a proxy:\nPress enter/return between each' ...
-%                     ' entry.\nExample: E17\nWhen you have entered all ' ...
-%                     'channels, input "done" (without quotations).\n']) ;
-%                 params.ecgone.ECGchan.ID = unique(UI_cellArray(1, {}), 'stable') ;
-%             end
-%             fprintf('Window creation length in MILLISECONDS for peak detection:\n') ;
-%             params.ecgone.peakWinSize = input('> ')/1000 ;
-% %             fprintf('Template window creation length in SECONDS:\n') ;
-% %             params.ecgone.procEpoch = input('> ') ;
-%             params.ecgone.procEpoch = 30 ;
-%         end
-%     end
+    if (~preExist || strcmpi(paramChoice, 'ECGone')) && ~reprocessing
+        fprintf(['Use ECGone (adapted from Isler et al., 2022) to reduce ' ...
+            'excess ECG artifact in your data? [Y/N]\n']) ;
+        params.ecgone.on = choose2('N', 'Y') ;
+        if params.ecgone.on
+            fprintf(['Does your data contain a dedicated ECG channel? [Y/N]' ...
+                '\n']) ;
+            params.ecgone.ECGchan.inc = choose2('N', 'Y') ;
+            if params.ecgone.ECGchan.inc
+                fprintf('Dedicated ECG channel name:\n') ;
+                params.ecgone.ECGchan.ID = input('> ', 's') ;
+                params.ecgone.peaky = 0 ;
+            else
+                fprintf(['Enter the channel names containing ECG artifact' ...
+                    ' to create a proxy:\nPress enter/return between each' ...
+                    ' entry.\nExample: E17\nWhen you have entered all ' ...
+                    'channels, input "done" (without quotations).\n']) ;
+                params.ecgone.ECGchan.ID = unique(UI_cellArray(1, {}), 'stable') ;
+                fprintf(['Threshold for determining if proxy contains ' ...
+                    'significant ECG artifact:\nExample: 10\n']) ;
+                params.ecgone.peaky = input('> ') ;
+            end
+            fprintf('Window creation length in MILLISECONDS for peak detection:\n') ;
+            params.ecgone.peakWinSize = input('> ')/1000 ;
+%             fprintf('Template window creation length in SECONDS:\n') ;
+%             params.ecgone.procEpoch = input('> ') ;
+            params.ecgone.procEpoch = 30 ;
+        end
+    end
 
     %% WAVELET METHODOLOGY
     if (~preExist || strcmpi(paramChoice, 'wavelet thresholding')) && ~reprocessing
@@ -386,11 +391,16 @@ while true
         params.segment.on = choose2('N', 'Y') ;
         if params.segment.on
             if params.paradigm.task
+                params.segment.bounds = NaN(size(params.paradigm.onsetTags,2),2) ;
                 % SET SEGMENT START AND END
-                params.segment.start = input(['Segment start, in MILLISECONDS, ' ...
-                    'relative to stimulus onset:\nExample: -100\n> '])/1000 ;
-                params.segment.end = input(['Segment end, in MILLISECONDS, ' ...
-                    'relative to stimulus onset:\n> '])/1000 ;
+%                 for i=1:size(params.segment.bounds,1)
+                    params.segment.bounds(1,1) = input(['Segment start, in MILLISECONDS, ' ...
+                        'relative to stimulus onset for "' params.paradigm.onsetTags{i} ...
+                        '":\nExample: -100\n> '])/1000 ;
+                    params.segment.bounds(1,2) = input(['Segment end, in MILLISECONDS, ' ...
+                        'relative to stimulus onset for "' params.paradigm.onsetTags{i} ...
+                        '":\n> '])/1000 ;
+%                 end
                 if params.paradigm.ERP.on
                     % DETERMINE TASK OFFSET
                     % *** For this, maybe make it possible to upload a list
