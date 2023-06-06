@@ -843,19 +843,23 @@ for currFile = 1:length(FileNames)
                     inputExt, ['_segments_postrej' rerunExt '.set'])) ;
             catch ME; rethrow(ME) ;
             end
+            if size(keptTrials,2)==dataQC{currFile,11}
+                dataQC{currFile,13} = 'All' ;
+            else; dataQC{currFile, 13} = [sprintf('%i, ', keptTrials(1:end-1)), ...
+                    num2str(keptTrials(end))] ;
+            end
+            clear('keptTrials') ;
         elseif params.segRej.on && EEG.trials == 1
             error('HAPPE:rejOneSeg', ['ERROR: Cannot reject segments from' ...
                 ' data with a single epoch.']) ;
+        else; dataQC{currFile,13} = 'All' ;
         end
         
         % UPDATE DATA QUALITY METRICS: Add the number and percent of trials
         % retained post-segment rejection.
         dataQC{currFile, 11} = EEG.trials ;
         dataQC{currFile, 12} = dataQC{currFile, 11}/dataQC{currFile, 10}*100 ;
-        dataQC{currFile, 13} = [sprintf('%i, ', keptTrials(1:end-1)), ...
-            num2str(keptTrials(end))] ;
-        clear('keptTrials') ;
-        
+ 
         %% INTERPOLATE BAD CHANNELS
         % If the file has channel locations, interpolate the bad channels
         % to enable proper re-referencing.
