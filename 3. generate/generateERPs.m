@@ -431,6 +431,14 @@ end
 
 %% COMPILE STATS TABLES
 cd([srcDir filesep 'generateERPs' filesep 'ERP_timeseries']) ;
+% ABBREVIATE LONG FILE NAMES
+outputFileNames = FileNames ;
+for i=1:size(FileNames,2)
+    if size(FileNames{i},2) > 30
+        outputFileNames{i} = [FileNames{i}(1:30-3) '...'] ;
+    end
+end
+
 % AVERAGE OVER TRIALS ALL FILES - ERP WAVEFORM
 saveName = ['AllSubsAve_generatedERPs' suffix '_' datestr(now, 'dd-mm-yyyy') '.csv'] ;
 indx = 2 ;
@@ -439,11 +447,11 @@ while isfile(saveName)
     indx = indx + 1 ;
 end
 if length(FileNames) > 1
-    printTab = array2table(aveToPlot, 'VariableNames', [FileNames ...
+    printTab = array2table(aveToPlot, 'VariableNames', [outputFileNames ...
         'Average ERP Waveform' '95% CI Lower Bound' '95% CI Upper Bound' ...
         'Standard Error']) ;
 else
-    printTab = array2table(aveToPlot(:,1), 'VariableNames', FileNames) ; % Does this work?! ***
+    printTab = array2table(aveToPlot(:,1), 'VariableNames', outputFileNames) ;
 end
 writetable(printTab, saveName) ;
 
@@ -477,7 +485,7 @@ if params.indivTrials
             end
             writetable(printTab, saveName) ;
         else
-            writetable(printTab, saveName, 'Sheet', FileNames{i}(1:30), ...
+            writetable(printTab, saveName, 'Sheet', outputFileNames{i}, ...
             	'WriteRowNames', true) ;
         end
     end
@@ -504,7 +512,7 @@ if params.calcVals.on
         peakTab(i,:) = allSubPeaks{i}(end,:) ;
     end
     peakTab = cell2table(peakTab, 'VariableNames', peakNames, 'RowNames', ...
-        [FileNames'; 'Average ERP Waveform']) ;
+        [outputFileNames'; 'Average ERP Waveform']) ;
     
     % Mean Amplitude
     meanAmpNames = cell(1, params.calcVals.meanAmpMethod(1)*size(params.calcVals.windows,1) + ...
@@ -527,7 +535,7 @@ if params.calcVals.on
         end
     end
     meanAmpTab = cell2table(meanAmpTab, 'VariableNames', meanAmpNames, ...
-        'RowNames', [FileNames'; 'Average ERP Waveform']) ;
+        'RowNames', [outputFileNames'; 'Average ERP Waveform']) ;
     
     % Area Under the Curve
     AUCNames = cell(1, params.calcVals.aucMethod(1)*(size(params.calcVals.windows,1)+1) + ...
@@ -566,7 +574,7 @@ if params.calcVals.on
         end
     end
     AUCbothTab = cell2table([AUCTab AUC50Tab], 'VariableNames', [AUCNames AUC50Names], ...
-        'RowNames', [FileNames'; 'Average ERP Waveform']) ;
+        'RowNames', [outputFileNames'; 'Average ERP Waveform']) ;
     
     printValTab = [peakTab meanAmpTab AUCbothTab] ;
     saveValName = ['AllSubsAve_generatedERPvals' suffix '_' ...
@@ -630,7 +638,7 @@ if params.calcVals.on
                     writetable(printValTab, saveValName, 'WriteRowNames', ...
                         true, 'QuoteStrings', true);
                 else
-                   writetable(printValTab, saveValName, 'Sheet', FileNames{i}(1:30), ...
+                   writetable(printValTab, saveValName, 'Sheet', outputFileNames{i}, ...
                        'WriteRowNames', true) ; % 'QuoteStrings', true) ;
                 end
             end
@@ -759,7 +767,7 @@ if params.calcVals.on
                 else
                     if size(sheetName,2) >= 30; sheetName = sheetName(1:30) ; end
                     printValTab = cell2table(byMeasure{i}, 'VariableNames', ...
-                        varNames, 'RowNames', [FileNames'; ...
+                        varNames, 'RowNames', [outputFileNames'; ...
                         'Average ERP Waveform']) ;
                     writetable(printValTab, saveValName, 'Sheet', sheetName, ...
                         'WriteRowNames', true) ;
