@@ -50,9 +50,9 @@ disp('Detecting bad channels...') ;
 % 3 SDeviations as channel outlier threshold (twice). This option is 
 % not available for low density layouts.
 if params.badChans.legacy
-    EEG = pop_rejchan(inEEG, 'elec', [1:length(chanIDs)], 'threshold', [-3 3], ...
+    EEG = pop_rejchan(inEEG, 'elec', 1:length(chanIDs), 'threshold', [-3 3], ...
         'norm', 'on', 'measure', 'spec', 'freqrange', [1 125]) ;
-    EEG = pop_rejchan(EEG, 'elec', [1:inEEG.nbchan], 'threshold', ...
+    EEG = pop_rejchan(EEG, 'elec', 1:inEEG.nbchan, 'threshold', ...
         [-3 3], 'norm', 'on', 'measure', 'spec', 'freqrange', [1 125]);
 
 % DEFAULT DETECTION:
@@ -97,8 +97,12 @@ disp('Evaluating bad channel detection...') ;
 dataQC{currFile,3} = size(EEG.chanlocs,2) ;
 dataQC{currFile, 4} = dataQC{currFile,3}/dataQC{currFile,2}*100 ;
 if ~isempty(EEG.chanlocs)
-    badChans = setdiff(chanIDs, {EEG.chanlocs.labels}, ...
-        'stable') ;
+    if isempty(EEG.chanlocs)
+        badChans = setdiff(chanIDs, {EEG.chanlocs.labels}, ...
+            'stable') ;
+    else; badChans = setdiff({inEEG.chanlocs.labels}, {EEG.chanlocs.labels}, ...
+            'stable') ;
+    end
     if isempty(badChans); dataQC{currFile, 5} = 'None' ;
     else; dataQC{currFile,5} = [sprintf('%s ', badChans{1:end-1}), badChans{end}] ;
     end
