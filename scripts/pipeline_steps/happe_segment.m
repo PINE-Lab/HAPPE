@@ -59,8 +59,8 @@ if EEG.trials == 1
         % tags, will throw a specific error to help the user troubleshoot.
         try
             EEG = pop_epoch(EEG, params.paradigm.onsetTags, ...
-                [params.segment.start, params.segment.end], 'verbose', ...
-                'no', 'epochinfo', 'yes') ;
+                [params.segment.start, params.segment.end], ...
+                'verbose', 'no', 'epochinfo', 'yes') ;
         catch ME
             if strcmp(ME.message, ['pop_epoch(): empty epoch range (no ' ...
                     'epochs were found).'])
@@ -73,7 +73,7 @@ if EEG.trials == 1
     % BASELINE/RESTING - SEGMENT USING LENGTH: Use the user-specified
     % segment length to epoch the data.
     else; EEG = eeg_regepochs(EEG, 'recurrence', params.segment.length, ...
-            'limits', [0 params.segment.length], 'rmbase', [NaN]) ;
+            'limits', [0 params.segment.length], 'rmbase', NaN) ;
     end
 else; fprintf('Cannot segment data that has already been segmented.\n') ;
 end

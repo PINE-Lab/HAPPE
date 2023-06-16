@@ -293,15 +293,19 @@ dataQC = cell(length(FileNames), length(dataQCnames)) ;
 % If processing for tasks, create an additional variable to hold specific
 % data metrics for each onset tag.
 if params.paradigm.task
-    dataQC_task = cell(length(FileNames), length(params.paradigm.onsetTags)*3) ;
-    dataQCnames_task = cell(1, length(params.paradigm.onsetTags)*3) ;
+    dataQC_task = cell(length(FileNames), length(params.paradigm.onsetTags)*5) ;
+    dataQCnames_task = cell(1, length(params.paradigm.onsetTags)*5) ;
     for i=1:size(params.paradigm.onsetTags,2)
-        dataQCnames_task{i*3-2} = ['Number_' params.paradigm.onsetTags{i} ...
+        dataQCnames_task{i*5-4} = ['Number_' params.paradigm.onsetTags{i} ...
             '_Segs_Pre-Seg_Rej'] ;
-        dataQCnames_task{i*3-1} = ['Number_' params.paradigm.onsetTags{i} ...
+        dataQCnames_task{i*5-3} = ['Number_' params.paradigm.onsetTags{i} ...
             '_Segs_Post-Seg_Rej'] ;
-        dataQCnames_task{i*3} = ['Percent_' params.paradigm.onsetTags{i} ...
+        dataQCnames_task{i*5-2} = ['Percent_' params.paradigm.onsetTags{i} ...
             '_Segs_Post-Seg_Rej'] ;
+        dataQCnames_task{i*5-1} = ['Kept_' params.paradigm.onsetTags{i} ...
+            '_Segs_Indxs_allSegs'] ;
+        dataQCnames_task{i*5} = ['Kept_' params.paradigm.onsetTags{i} ...
+            '_Segs_Indxs_byTag'] ;
     end
     
     % If grouping any tags by condition, create additional variable to hold
@@ -481,7 +485,8 @@ for currFile = 1:length(FileNames)
                     EEG.nbchan = EEG.nbchan - 1;
                     EEG.chaninfo.refChan = EEG.chanlocs(indx) ;
                     EEG.chanlocs(indx) = [] ;
-                elseif ismember(params.reref.chan, {EEG.chaninfo.nodatchans.labels})
+                elseif ~isempty(EEG.chaninfo.nodatchans) && ...
+                        ismember(params.reref.chan, {EEG.chaninfo.nodatchans.labels})
                     indx = find(strcmpi({EEG.chaninfo.nodatchans.labels}, ...
                         params.reref.chan)) ;
                     EEG.chaninfo.refChan = EEG.chaninfo.nodatchans(indx) ;
@@ -492,7 +497,8 @@ for currFile = 1:length(FileNames)
                         'not be correct!']) ;
                 else
                     warning(['Unable to locate your defined reference ' ...
-                        'channel!']) ;
+                        'channel! Will run as if no flatline reference ' ...
+                        'is included.']) ;
                     params.reref.flat = 0 ;
                 end 
             end
@@ -765,10 +771,10 @@ for currFile = 1:length(FileNames)
         if params.paradigm.task
             % Segments per Event Tag:
             for i=1:length(params.paradigm.onsetTags)
-                try dataQC_task{currFile, i*3-2} = length(pop_selectevent(EEG, ...
+                try dataQC_task{currFile, i*5-4} = length(pop_selectevent(EEG, ...
                        'type', params.paradigm.onsetTags{i}).epoch) ;
                 catch
-                    dataQC_task{currFile, i*3-2} = 0 ;
+                    dataQC_task{currFile, i*5-4} = 0 ;
                     fprintf('No instances of "%s" in this file.\n', ...
                         params.paradigm.onsetTags{i}) ;
                 end
@@ -836,7 +842,11 @@ for currFile = 1:length(FileNames)
         % the entire set of channels present in the data. If the data is
         % continuous or is a single trial, cannot reject segments.
         if params.segRej.on && EEG.trials > 1
-            try [EEG, keptTrials] = happe_segRej(EEG, params) ;
+            try 
+                if params.paradigm.task && size(params.paradigm.onsetTags,2) > 1
+                    origTrials = EEG.epoch ;
+                end
+                [EEG, keptTrials] = happe_segRej(EEG, params) ;
                 
                 % SAVE FILE WITH SEGMENTS REJECTED
                 pop_saveset(EEG, 'filename', strrep(FileNames{currFile}, ...
@@ -847,6 +857,36 @@ for currFile = 1:length(FileNames)
                 dataQC{currFile,13} = 'All' ;
             else; dataQC{currFile, 13} = [sprintf('%i, ', keptTrials(1:end-1)), ...
                     num2str(keptTrials(end))] ;
+            end
+            if params.paradigm.task && size(params.paradigm.onsetTags,2) > 1
+                tempTrials = cell(1, size(params.paradigm.onsetTags,2)) ;
+                for i=1:size(params.paradigm.onsetTags,2)
+                    for j=1:size(origTrials,2)
+                        if ismember(params.paradigm.onsetTags{i}, ...
+                                origTrials(j).eventtype)
+                            tempTrials{i} = [tempTrials{i} j] ;
+                        end
+                    end
+                end
+
+                for i=1:size(params.paradigm.onsetTags,2)
+                    for j=1:size(keptTrials,2)
+                        if ismember(params.paradigm.onsetTags{i}, ...
+                                origTrials(keptTrials(j)).eventtype)
+                            if isempty(dataQC_task{currFile, i*5})
+                                dataQC_task{currFile, i*5-1} = num2str(keptTrials(j)) ;
+                                dataQC_task{currFile, i*5} = num2str(find(tempTrials{i}==keptTrials(j))) ;
+                            else
+                                dataQC_task{currFile, i*5-1} = [dataQC_task{currFile, ...
+                                    i*5-1} ', ' num2str(keptTrials(j))] ;
+                                dataQC_task{currFile, i*5} = [dataQC_task{currFile, ...
+                                    i*5} ', ' num2str(find(tempTrials{i}==keptTrials(j)))] ;
+                            end
+                        end
+                    end
+                end
+                
+                clear('origTrials') ;
             end
             clear('keptTrials') ;
         elseif params.segRej.on && EEG.trials == 1
@@ -915,14 +955,14 @@ for currFile = 1:length(FileNames)
             for i=1:size(params.paradigm.onsetTags,2)
                 try eegByTags{i} = pop_selectevent(EEG, 'type', ...
                         params.paradigm.onsetTags{i}) ;                   
-                    dataQC_task{currFile, i*3-1} = length(eegByTags{i}.epoch) ;
-                    dataQC_task{currFile, i*3} = dataQC_task{currFile, i*3-1} ...
-                        / dataQC_task{currFile, i*3-2}*100 ;
+                    dataQC_task{currFile, i*5-3} = length(eegByTags{i}.epoch) ;
+                    dataQC_task{currFile, i*5-2} = dataQC_task{currFile, i*5-3} ...
+                        / dataQC_task{currFile, i*5-4}*100 ;
                 catch
                     fprintf('No instances of tag %s appear in this file.\n', ...
                         params.paradigm.onsetTags{i}) ;
-                    dataQC_task{currFile, i*3-1} = 0 ;
-                    dataQC_task{currFile, i*3} = 'NA' ;
+                    dataQC_task{currFile, i*5-3} = 0 ;
+                    dataQC_task{currFile, i*5-2} = 'NA' ;
                 end
             end
             
