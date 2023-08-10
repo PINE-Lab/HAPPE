@@ -177,13 +177,13 @@ if params.filt.on
 else; fprintf('Off\n') ;
 end
 
-%% Legacy Bad Channel Selection
+%% Bad Channel Detection
 if isfield(params, 'badChans')
     fprintf('Bad Channel Detection: ') ;
     if params.badChans.rej
-        fprintf('On\n - Bad Channel Detection Method: ') ;
-        if params.badChans.legacy; fprintf('Legacy\n') ;
-        else; fprintf('Default\n') ;
+        fprintf('On\n - Bad Channel Detection Order: ') ;
+        if params.badChans.order; fprintf('After Wavelet Thresholding\n') ;
+        else; fprintf('Before Wavelet Thresholding\n') ;
         end
     else; fprintf('Off\n') ;
     end  

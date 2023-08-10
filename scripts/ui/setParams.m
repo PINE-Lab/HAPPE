@@ -317,12 +317,20 @@ while true
     if (~preExist || strcmpi(paramChoice, 'bad channel detection')) && ~reprocessing
         fprintf('Perform bad channel detection? [Y/N]\n') ;
         params.badChans.rej = choose2('n','y') ;
-        if params.badChans.rej && ~params.lowDensity
-            fprintf(['Bad channel detection method:\n  default = ' ...
-                'Default method optimized in HAPPE v2.\n  legacy = ' ...
-                'Method from HAPPE v1 (NOT RECOMMENDED).\n']) ;
-            params.badChans.legacy = choose2('default', 'legacy') ;
-        else; params.badChans.legacy = 0 ;
+        if params.badChans.rej
+            if params.lowDensity; params.badChans.order = 0 ;
+            else
+                fprintf(['Run bad channel detection before or after wavelet' ...
+                    ' thresholding?\n  before = Run bad channel detection ' ...
+                    'first.\n  after = Run wavelet thresholding first (retains ' ...
+                    'more channels)\n']) ;
+                params.badChans.order = choose2('before', 'after') ;
+            end
+%             fprintf(['Run bad channel detection before or after wavelet' ...
+%                 ' thresholding?\n  before = Run bad channel detection ' ...
+%                 'first.\n  after = Run wavelet thresholding first (retains ' ...
+%                 'more channels)\n']) ;
+%             params.badChans.order = choose2('before', 'after') ;
         end
     end
 

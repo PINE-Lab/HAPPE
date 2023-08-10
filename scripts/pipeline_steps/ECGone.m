@@ -68,8 +68,8 @@ for currEpoch=1:size(EEG.data,3)
     % If approximating the channel from artifact, confirm the data is
     % sufficiently "peaky". If not, end the run via error.
     if ~params.ECGchan.inc
-        outlierIndxs = find(peaks > (1.5*iqr(peaks) + median(peaks, 'omitnan')) ...
-            | peaks < (-1.5*iqr(peaks) + median(peaks, 'omitnan'))) ;
+%         outlierIndxs = find(peaks > (1.5*iqr(peaks) + median(peaks, 'omitnan')) ...
+%             | peaks < (-1.5*iqr(peaks) + median(peaks, 'omitnan'))) ;
 
         if median((peaks - median(ECGchan))./median(ECGchan)) < params.peaky
             fprintf('Insufficient ECG artifact to create template.\n') ;
