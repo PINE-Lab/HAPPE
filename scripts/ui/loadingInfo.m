@@ -44,6 +44,7 @@ loadInfo.inputFormat = setFormat() ;
 % Assume that the channel locations are included. Because this is true for
 % most layouts/nets, it is easier to change in in the no-location layouts.
 loadInfo.chanlocs.inc = 1;
+loadInfo.sys = 0 ;
 
 % IF INPUT FORMAT IS .MAT:
 if loadInfo.inputFormat == 1
@@ -103,12 +104,12 @@ if loadInfo.inputFormat == 1
         clear('List') ;
         
         % Collect sampling rate information (described above):
-        fprintf(['Do all your files share the same sampling rate? [Y/N]\n']) ;
+        fprintf('Do all your files share the same sampling rate? [Y/N]\n') ;
         loadInfo.srate.same = choose2('n','y') ;
         if loadInfo.srate.same
             fprintf('Sampling rate:\n') ;
             while true
-                loadInfo.srate.val = input(['> ']) ;
+                loadInfo.srate.val = input('> ') ;
                 if isnumeric(loadInfo.srate.val); break;
                 else; disp('Invalid input: please enter a real number.') ;
                 end
@@ -163,8 +164,25 @@ elseif loadInfo.inputFormat == 5
             loadInfo.typeFields = UI_cellArray(2, {'code'}) ;
         end
     end
+% .edf
 elseif loadInfo.inputFormat == 6
-    [loadInfo.chanlocs.inc, loadInfo.chanlocs.file] = determ_chanLocs() ;
+    while true
+        fprintf(['Select your system:\n  1 = Mentalab\n  2 = EMOTIV\n' ...
+            '  3 = Other\n'])
+        loadInfo.sys = input('> ') ;
+        if ismember(loadInfo.sys, [1,2,3]); break ;
+        else; fprintf('Please enter a valid selection.') ;
+        end
+    end
+    if loadInfo.sys == 2
+        fprintf(['Enter the channels in your aquisition set-up, one at' ...
+            ' a time,\npressing Enter/Return between entries.\nWhen you ' ...
+            'are finished entering channels, enter "done" (without quotations).\n']) ;
+        loadInfo.chanlocs.expected = UI_cellArray(1, {}) ;
+        loadInfo.chanlocs.locs = fixLocs(loadInfo.chanlocs.expected, happeDir) ;
+    else
+        [loadInfo.chanlocs.inc, loadInfo.chanlocs.file] = determ_chanLocs() ;
+    end
 elseif loadInfo.inputFormat == 7
     % Will probably need to load the chanlocs ***
 end
@@ -200,7 +218,7 @@ fprintf(['Acquisition layout type:\n  1 = EGI Geodesic Sensor ' ...
     '\n  4 = Mentalab Explore\n  5 = Other\n']) ;
 while true
     layout(1) = input('> ') ;
-    if ismember(layout(1), [1:5]); break;
+    if ismember(layout(1), 1:5); break;
     else; fprintf('Invalid input: please enter an integer between 1 and 5.\n') ;
     end
 end
@@ -211,7 +229,7 @@ while true
                 'supports 64 channels.\n']) ;
         elseif layout(1) == 2; fprintf(['For .raw EGI HydroCel GSN ' ...
                 'files, HAPPE supports 32, 64, 128, and 256 channels.\n']) ;
-        else; error(['HAPPE does not support this net for .raw files.']) ;
+        else; error('HAPPE does not support this net for .raw files.') ;
         end
     elseif inputFormat == 4
         if layout(1) ~= 3; error(['To run a .cdt file, the net must be' ...

@@ -267,7 +267,10 @@ switch params.loadInfo.inputFormat
     case 3; inputExt = '.set' ;
     case 4; inputExt = '.cdt' ;
     case 5; inputExt = '.mff' ;
-    case 6; inputExt = '.EDF' ;
+    case 6
+        if params.loadInfo.sys == 2; inputExt = '.edf' ;
+        else; inputExt = '.EDF' ;
+        end
     case 7; inputExt = '.set' ;
 end
 % COLLECT FILE NAMES: gather the names of all the files with the relevant
@@ -417,6 +420,15 @@ for currFile = 1:length(FileNames)
                     % .EDF FILES
                     case 6; EEGraw = pop_biosig(FileNames{currFile}, ...
                             'blockepoch', 'off') ;
+                        if params.loadInfo.sys == 2 && params.paradigm.task
+                            EEGraw = pop_importevent(EEGraw, 'event', ...
+                                [srcDir filesep strrep(FileNames{currFile}, ...
+                                '.edf', '_intervalMarker.csv')], 'fields', ...
+                                {'latency', 'duration', 'type', ...
+                                'marker_value', 'key', 'timestamp', ...
+                                'marker_id'}, 'skipline', 1, 'timeunit', 1, ...
+                                'align', 0);
+                        end
                     % .BDF->.SET
                     case 7; EEGraw = pop_loadset('filename', FileNames{currFile}) ;
                 end
@@ -470,6 +482,9 @@ for currFile = 1:length(FileNames)
                     {params.loadInfo.chanlocs.file 'filetype' 'autodetect'}) ;
                 % VALIDATE THAT THE EEG WAS CORRECTED CORRECTLY
                 EEG = eeg_checkset(EEG) ;
+            elseif params.loadInfo.sys == 2
+                EEG = pop_select(EEG, 'channel', params.loadInfo.chanlocs.expected);
+                EEG.chanlocs = params.loadInfo.chanlocs.locs ;
             end
             
             %% SET THE FLATLINE REFERENCE CHANNEL
@@ -1076,7 +1091,7 @@ for currFile = 1:length(FileNames)
                 end
             end
         end
-        if params.outputFormat == 1
+       if params.outputFormat == 1
             pop_export(EEG, strrep(FileNames{currFile}, inputExt, ...
                 ['_processed_IndivTrial' rerunExt '.txt']), ...
                 'transpose', 'on', 'precision', 8) ;

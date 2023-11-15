@@ -38,8 +38,11 @@ addpath([happeDir filesep '3. generate'], ...
     [happeDir filesep 'scripts' filesep 'ui'], ...
     [happeDir filesep 'scripts' filesep 'support'], ...
     [happeDir filesep 'scripts' filesep 'python'], ...
-    eeglabDir, [eeglabDir filesep 'functions']) ;
+    eeglabDir,  genpath([eeglabDir filesep 'functions'])) ;
 rmpath(genpath([eeglabDir filesep 'functions' filesep 'octavefunc'])) ;
+pluginDir = dir([eeglabDir filesep 'plugins']) ;
+pluginDir = strcat(eeglabDir, filesep, 'plugins', filesep, {pluginDir.name}, ';') ;
+addpath([pluginDir{:}]) ;
 
 %% DETERMINE AND SET PATH TO THE DATA
 % Use input from the Command Window to set the path to the data. If an 
@@ -60,15 +63,6 @@ cd(srcDir) ;
 fprintf('Gathering files...\n') ;
 FileNames = {dir('*.set').name} ;
 if isempty(FileNames); error('ERROR: NO .SET FILES FOUND') ; end
-
-%% CREATE OUTPUTS FOLDER
-% Create the folder to store outputs of this script.
-fprintf('Creating output folder...\n') ;
-if ~isfolder([srcDir filesep 'nonlinear_measures'])
-    mkdir([srcDir filesep 'nonlinear_measures']) ;
-end
-addpath('nonlinear_measures') ;
-cd([srcDir filesep 'nonlinear_measures']) ;
 
 %% DETERMINE IF LOADING PARAMETERS
 fprintf('Load a pre-existing set of parameters? [Y/N]\n') ;
@@ -105,17 +99,17 @@ end
 %% SET PARAMETERS
 while true
     userChoice = '' ;
-    %% BREAK IF NOT CHANGING EXISTING PARAMETERS
+    % BREAK IF NOT CHANGING EXISTING PARAMETERS
     if preExist && ~changedParams; break ; end
     
-    %% IF CHANGING EXISTING PARAMETERS, LIST OPTIONS AND COLLECT USER INPUT
+    % IF CHANGING EXISTING PARAMETERS, LIST OPTIONS AND COLLECT USER INPUT
     if changedParams
         fprintf(['Parameter to change: features, frequency bands, ' ...
             'python version\n']) ;
         userChoice = input('> ', 's') ;
     end
 
-    %% NONLINEAR MEASURE FEATURES:
+    % NONLINEAR MEASURE FEATURES:
     if ~preExist || strcmpi(userChoice, 'features')
         params.featureList = {'katz', 'higuchi', 'lzw_rho_median', ...
                 'SampE', 'hurstrs', 'dfa'} ;
@@ -125,7 +119,7 @@ while true
         % INCLUDE
         if choose2('all', 'subset')
             fprintf(['Enter your features of interest from the list ' ...
-                    'below, exactly as displayed.\nPress Enter/Return' ...
+                    'below, exactly as displayed.\nPress Enter/Return ' ...
                     'between each entry.\nWhen you have finished entering ' ...
                     'all features, enter "done" (without quotations).\n' ...
                     'Possible Features: ' sprintf('%s, ', params.featureList{1:end-1}) ...
@@ -134,7 +128,7 @@ while true
             while true
                 ui = input('> ', 's') ;
                 if ismember(ui, params.featureList)
-                    tempFeatures = [tempFeatures, ui] ;                      %#ok<AGROW> 
+                    tempFeatures = [tempFeatures, ui] ;                       
                 elseif strcmpi(ui, 'done')
                     if isempty(tempFeatures); fprintf('No features entered.\n') ;
                     else; break ;
@@ -147,12 +141,56 @@ while true
         end
     end
 
-    %% FREQUENCY BANDS:
+    % FREQUENCY BANDS:
     if ~preExist || strcmpi(userChoice, 'frequency bands')
         [params.fb.customBands, params.fb.bands] = setFreqBands() ;
     end
+
+    % CHANNELS OF INTEREST/REGIONS OF INTEREST:
+    if ~preExist || strcmpi(userChoice, 'channels of interest')
+        params.rois = {} ;
+        indx = 1;
+        while true
+            [params.rois{1,indx}, params.rois{2,indx}] = determ_chanIDs() ;
+            fprintf(['Enter a name for this subset:\nNOTE: We recommend ' ...
+                'short names of approximately 6 characters or less\n']) ;
+            params.rois{3,indx} = input('> ', 's') ;
+            fprintf('Add another subset? [Y/N]\n') ;
+            if ~choose2('N','Y'); break; end
+            indx = indx+1;
+        end
+        % Remove ROIs with duplicate names.
+        for i=1:size(params.rois,2)
+            if sum(ismember(params.rois(3,:), params.rois{3,i})) > 1
+                dupeNames = find(strcmpi(params.rois(3,:), params.rois{3,i})) ;
+                params.rois = params.rois(:, setdiff(1:size(params.rois,2), ...
+                    dupeNames(2:end))) ;
+            end
+        end
+        % Remove duplicate requests for "all" channels
+        if sum(ismember(params.rois(1,:), 'all')) > 1
+            dupeNames = find(strcmpi(params.rois(1,:), 'all')) ;
+            params.rois = params.rois(:, setdiff(1:size(params.rois,2), ...
+                dupeNames(2:end))) ;
+        end
+    end
+
+    % INDIVIDUAL, AVERAGE, OR BOTH TRIALS/SEGS
+    fprintf(['Calculate nonlinear measures:\n  individual = By individual ' ...
+        'trials/segments\n  average = For the average over trials/segments' ...
+        '\n  both = Both individual trials/segments and average over ' ...
+        'trials/segments\n']) ;
+    while true
+        ui = input('> ','s') ;
+        if strcmpi(ui, 'individual'); params.method = [1,0]; break;
+        elseif strcmpi(ui, 'average'); params.method = [0,1]; break;
+        elseif strcmpi(ui, 'both'); params.method = [1,1]; break;
+        else; fprintf(['Invalid input: please enter "individual", "average"' ...
+                ', or "both" (without quotations)\n']) ;
+        end
+    end
    
-    %% PYTHON VERSION:
+    % PYTHON VERSION:
     if ~preExist || strcmpi(userChoice, 'python version')
         fprintf('Python version:\n') ;
         while true
@@ -164,7 +202,7 @@ while true
         end
     end
 
-    %% CONFIRM PARAMETERS:
+    % CONFIRM PARAMETERS:
     if ~preExist || strcmpi('done', userChoice)
         fprintf('Please check your input parameters before continuing.\n') ;
         genNlM_listParams(params) ;
@@ -206,109 +244,181 @@ pyenv('Version', params.pyVers) ;
 % IMPORT MODULES:
 nolds = py.importlib.import_module('nolds') ;
 antropy = py.importlib.import_module('antropy') ;
+cd([happeDir filesep 'scripts' filesep 'python'])
 lzw_ruffini = py.importlib.import_module('LZW_Ruffini') ;
 
+%% CREATE OUTPUTS FOLDERS
+% Create the folder to store outputs of this script.
+fprintf('Creating output folder...\n') ;
+if ~isfolder([srcDir filesep 'nonlinear_measures'])
+    mkdir([srcDir filesep 'nonlinear_measures']) ;
+end
+addpath([srcDir filesep 'nonlinear_measures']) ;
+cd([srcDir filesep 'nonlinear_measures']) ;
+for currFeat=1:size(params.featureList,2)
+    if ~isfolder([srcDir filesep 'nonlinear_measures' filesep ...
+            params.featureList{currFeat}])
+        mkdir([srcDir filesep 'nonlinear_measures' filesep ...
+            params.featureList{currFeat}]) ;
+    end
+end
+
 %% SET VARIABLES
-decompBySub = cell(1, size(FileNames,2)) ; % Array to hold all the features
+decompBySub = cell(size(FileNames,2), size(params.rois,2)) ; % Array to hold all the features
 
 %% RUN NONLINEAR MEASURE CALCULATIONS ON FILES
 cd(srcDir) ;
 for currFile=1:size(FileNames,2)
     % LOAD THE FILE
+    fprintf(sprintf('<strong>Loading %s...</strong>\n', FileNames{currFile})) ;
     EEG = load('-mat', FileNames{currFile}) ;
      
     % RUN OVER EACH FREQUENCY BAND
     for currBand=1:size(params.fb.bands,1)
+        fprintf(sprintf('Processing %s band...\n', params.fb.bands{currBand,1})) ;
         % FILTER TO THE BAND
         EEGfilt = pop_eegfiltnew(EEG, str2double(params.fb.bands{currBand,2}), ...
             str2double(params.fb.bands{currBand,3}), [], 0, [], 0) ;
-        % ITERATE THROUGH CHANNELS, skipping NaN channels
-        for currChan=1:EEG.nbchan
-            % ITERATE THROUGH EPOCHS
-            for currEpoch=1:EEG.trials
-                currData = EEGfilt.data(currChan, :, currEpoch) ;
-                % 1A. SAMPLE ENTROPY
-                if contains('SampE', params.featureList)
-                    try D.("SampE").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = nolds.sampen(currData) ;
-                    catch; D.("SampE").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = NaN ;
+        
+        % FIND CHANNELS OF INTEREST
+        for currROI=1:size(params.rois,2)
+            chanIndxs = [] ;
+            if ~isempty(EEG.chanlocs)
+                % If the ROI requests all channels, simply use all possibly
+                % indicies.
+                if strcmpi(params.rois{1,currROI}, 'all')
+                    chanIndxs = 1:size(EEG.data,1) ;
+                % If selecting to include or exclude channels, find use the
+                % channel locations to get the index associated with the
+                % relevant channel in the data matrix.
+                else
+                    for i=1:size(params.rois{2,currROI}, 2)
+                        chanIndxs = [chanIndxs find(ismember({EEG.chanlocs.labels}, ...
+                            params.rois{2, currROI}{i}))] ;                 %#ok<*AGROW> 
+                    end
+                    if strcmpi(params.rois{1,currROI}, 'coi_exclude')
+                        chanIndxs = setdiff(1:size(EEG.data,1), ...
+                            chanIndxs) ;
+                    elseif ~strcmpi(params.rois{1,currROI}, 'coi_include')
+                        error('Invalid channel COI selection.') ;
                     end
                 end
-                % 1B. HURST PARAMETER
-                if contains('hurstrs', params.featureList)
-                    try D.("hurstrs").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = nolds.hurst_rs(currData) ;
-                    catch; D.("hurstrs").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = NaN ;
+            else
+                fprintf(['Cannot select ROIs for data without channel names. ' ...
+                    'Will use all existing channels.']) ;
+                chanIndxs = 1:size(EEG.data,1) ;
+            end
+            saveChanIndxs{currROI} = chanIndxs ;
+
+            % ITERATE THROUGH CHANNELS, skipping NaN channels
+            for currChan=1:size(chanIndxs,2)
+                % ITERATE THROUGH EPOCHS
+                for currEpoch=1:EEG.trials
+                    currData = EEGfilt.data(chanIndxs(currChan), :, currEpoch) ;
+                    % 1A. SAMPLE ENTROPY
+                    if contains('SampE', params.featureList)
+                        try chanCalc.("SampE")(currEpoch) = nolds.sampen(currData) ;
+                            
+                            allSubs.("SampE"){currROI}{currBand}{currFile, ...
+                                currChan}(currEpoch) = nolds.sampen(currData) ;
+                        catch; D.("SampE").(params.fb.bands{currBand,1})(currChan, ...
+                                currEpoch) = NaN ;
+                        end
+                    end
+                    % 1B. HURST PARAMETER
+                    if contains('hurstrs', params.featureList)
+                        try allSubs.("SampE"){currROI}{currBand}{currFile, ...
+                                currChan}{currEpoch} = nolds.hurst_rs(currData) ;
+                        catch; D.("hurstrs").(params.fb.bands{currBand,1})(currChan, ...
+                                currEpoch) = NaN ;
+                        end
+                    end
+                    % 1C. DFA
+                    if contains('dfa', params.featureList)
+                        try allSubs.("dfa"){currROI}{currBand}{currFile, ...
+                                currChan}{currEpoch} = nolds.dfa(currData) ;
+                        catch; D.("dfa").(params.fb.bands{currBand,1})(currChan, ...
+                                currEpoch) = NaN ;
+                        end
+                    end
+                    % 2A. FRACTAL DIMENSION - KATZ
+                    if contains('katz', params.featureList)
+                        try allSubs.("katz"){currROI}{currBand}{currFile, ...
+                                currChan}{currEpoch} = ...
+                                antropy.fractal.katz_fd(currData) ;
+                        catch; D.("katz").(params.fb.bands{currBand,1})(currChan, ...
+                                currEpoch) = NaN ;
+                        end
+                    end
+                    % 2B. FRACTAL DIMENSION - HIGUCHI
+                    if contains('higuchi', params.featureList)
+                        try allSubs.("higuchi"){currROI}{currBand}{currFile, ...
+                                currChan}{currEpoch} = ...
+                                antropy.fractal.higuchi_fd(currData) ;
+                        catch; D.("higuchi").(params.fb.bands{currBand,1})(currChan, ...
+                                currEpoch) = NaN ;
+                        end
+                    end
+                    % 3. LEMPEL ZIV COMPLEXITY
+                    if contains('lzw_rho_median', params.featureList)
+                        try allSubs.("lzw_rho_median"){currROI}{currBand}{currFile, ...
+                                currChan}{currEpoch} = ...
+                                lzw_ruffini.Compute_rho0(binarize(currData)) ;
+                        catch; D.("lzw_rho_median").(params.fb.bands{currBand,1})(currChan, ...
+                                currEpoch) = NaN ;
+                        end
                     end
                 end
-                % 1C. DFA
-                if contains('dfa', params.featureList)
-                    try D.("dfa").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = nolds.dfa(currData) ;
-                    catch; D.("dfa").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = NaN ;
-                    end
-                end
-                % 2A. FRACTAL DIMENSION - KATZ
-                if contains('katz', params.featureList)
-                    try D.("katz").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = antropy.fractal.higuchi_fd(currData) ;
-                    catch; D.("katz").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = NaN ;
-                    end
-                end
-                % 2B. FRACTAL DIMENSION - HIGUCHI
-                if contains('higuchi', params.featureList)
-                    try D.("higuchi").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = antropy.fractal.higuchi_fd(currData) ;
-                    catch; D.("higuchi").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = NaN ;
-                    end
-                end
-                % 3. LEMPEL ZIV COMPLEXITY
-                if contains('lzw_rho_median', params.featureList)
-                    try D.("lzw_rho_median").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = lzw_ruffini.Compute_rho0(binarize(currData)) ;
-                    catch; D.("lzw_rho_median").(params.fb.bands{currBand,1})(currChan, ...
-                            currEpoch) = NaN ;
-                    end
-                end
+%                 fields = fieldnames(chanCalc) ;
+%                 for currFeat = 1:length(fields)
+%                     allSubs.(fields{currFeat}){currROI}{currBand}{currFile, ...
+%                         currChan} = mean(chanCalc.(fields{currFeat})) ;
+%                 end
             end
         end
     end
-    decompBySub{currFile} = D ;
 end
 
-%% RECONFIGURE MATRIX TO OUTPUT FORMAT
-% Average over epochs. *** Will add a means to keep all epochs
-output = cell(1, size(params.featureList,2)) ;
-for currFile=1:size(decompBySub,2)
-    for currFeat=1:size(params.featureList,2)
-        for currBand=1:size(params.fb.bands,1)
-            for currChan=1:EEG.nbchan
-                output{currFeat}{currBand}{currFile,currChan} = ...
-                    mean(decompBySub{currFile}.(params.featureList{...
-                    currFeat}).(params.fb.bands{currBand,1})(currChan, ...
-                    :), 2, 'omitnan') ;
+%% OUTPUT TABLES
+chanLabels = {EEG.chanlocs.labels} ;
+for currFeat = 1:size(params.featureList,2)
+    currName = ['genNlM_' params.featureList{currFeat}] ;
+    for currROI = 1:size(params.rois,2)
+        currName = [currName '_' params.rois{3,currROI}] ;
+        for currBand = 1:size(params.fb.bands,1)
+            currName = [currName '_' params.fb.bands{currBand,1}] ;
+            currMat = allSubs.(params.featureList{currFeat}){currROI}{currBand} ;
+            for currFile = 1:size(FileNames,2)
+                if params.method(1); outMat = [] ; end
+                for currChan = 1:size(currMat, 2)
+                    if params.method(1)
+                        outMat = [outMat; currMat{currFile, currChan}] ;
+                    end
+                    if params.method(2)
+                        allSubs.(params.featureList{currFeat}){currROI} ...
+                            {currBand}{currFile, currChan} = mean(currMat{currFile, ...
+                            currChan}) ;
+                    end
+                end
+                if params.method(1)
+                    colNames = {} ;
+                    for i=1:size(outMat,2)
+                        colNames = [colNames, ['Epoch_' num2str(i)]] ;
+                    end
+                    writetable(array2table(outMat, 'VariableNames', colNames, ...
+                        'RowNames',  chanLabels(saveChanIndxs{currROI})'), ...
+                        helpName([filesep 'indivTrials' filesep currName '-' ...
+                        strrep(FileNames{currFile}, '.set', '.csv')]), ...
+                        'WriteRowNames', true, 'QuoteStrings', true) ;
+                end
+            end
+            if params.method(2)
+                writetable(array2table(allSubs.(params.featureList{currFeat}){currROI}{currBand}, ...
+                    'VariableNames', chanLabels(saveChanIndxs{currROI}), ...
+                    'RowNames', FileNames'), helpName([currName '.csv'], '.csv'), ...
+                    'WriteRowNames', true, 'QuoteStrings', true) ;
             end
         end
-    end
-end
-
-
-%% OUTPUT TABLES AS .XLSX FILES
-for currFeat=1:size(output,2) % Output a new file for each feature
-    % Create Save Name
-    saveName = [params.featureList{currFeat} '_generatedNonlinearMeasures' ...
-        '_' datestr(now, 'dd-mm-yyyy') '.xlsx'] ;
-    for currBand=1:size(output{currFeat},2)
-        % for each band, append a new sheet to the file made of a table
-        % from the current output
-        writetable(array2table(output{currFeat}{currBand}, 'VariableNames', ...
-            {EEG.chanlocs.labels}, 'RowNames', FileNames'), saveName, ...
-            'WriteRowNames', true, 'Sheet', params.fb.bands{currBand,1}) ;
     end
 end
 
