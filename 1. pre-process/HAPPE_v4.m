@@ -1,5 +1,5 @@
 %~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-% HAPPE Version 4.0
+% HAPPE Version 4.1
 %
 % Developed at Northeastern University's PINE Lab
 %
@@ -162,7 +162,7 @@ cd (srcDir) ;
 [reprocess, ranMuscIL, rerunExt] = isReprocessed() ;
 
 %% DETERMINE IF USING PRESET PARAMETERS
-ver = '4_0_0' ;
+ver = '4_1_0' ;
 [preExist, params, changeParams] = isPreExist(reprocess, ver) ;
 
 %% SET PARAMETERS

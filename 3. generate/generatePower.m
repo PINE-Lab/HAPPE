@@ -788,8 +788,13 @@ for currFile = 1:size(FileNames,2)
                 sp_outCols_orig{1,i*3-1} = ['peak' num2str(i) '_powerAboveAper'] ;
                 sp_outCols_orig{1,i*3} = ['peak' num2str(i) '_bandwidth'] ;
             end
-            sp_outCols_orig = ['aper_offset', 'aper_exponent', sp_outCols_orig, ...
+            if strcmp(params.specparam.settings.aperiodic_mode, 'knee')
+                sp_outCols_orig = ['aper_offset', 'aper_knee', 'aper_exponent', sp_outCols_orig, ...
                 'error', 'r_squared'] ;
+            else
+                sp_outCols_orig = ['aper_offset', 'aper_exponent', sp_outCols_orig, ...
+                    'error', 'r_squared'] ;
+            end
             if params.specparam.bands.on
                 for i=1:size(params.specparam.bands.vals,1)
                     sp_outCols_orig = [sp_outCols_orig, [params.specparam.bands.vals{i,1} ...
@@ -1050,7 +1055,7 @@ for currFile = 1:size(FileNames,2)
                             tempBand = [tempBand sp_outMat_temp(i,:)] ;
                         end
                         subLvl_specparam{1,currROI} = [subLvl_specparam{1,...
-                            currROI}; num2cell(tempBand)] ;
+                            currROI}; tempBand] ; % TODO: check cases where num2cell(tempBand) is valid 
                     end
                     % Visualizations for chans
                     figName = [srcDir filesep 'generatePower' filesep ...
