@@ -286,7 +286,7 @@ while true
             params.specparam.settings.peak_threshold = input('> ') ;
     end
     % Determine Peak Mode - DO NOT RENAME VARIABLE
-    if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam peak mode'))
+    if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam mode'))
         fprintf(['Aperiodic mode?\n  fixed = fixed aperiodic mode\n  ' ...
             'knee = knee aperiodic mode\n']) ;
         while true
