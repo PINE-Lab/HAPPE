@@ -182,7 +182,7 @@ for currfile=1:size(FileNames, 2)+1
     
             trialBounds = [find(currsub.data(:,1)==min(lats)), ...
                     find(currsub.data(:,1)==max(lats))] ;
-        catch
+        catch e
             fprintf(['Failed to process ' FileNames{currfile} '...\n']) ;
             continue ;
         end
