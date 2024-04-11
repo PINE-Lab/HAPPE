@@ -395,7 +395,7 @@ for currFile = 1:size(indxDataQC,2)
                 vals = resultsTab.(strrep(params.dataQC.multiple{1,1}, ...
                     'TAG', params.dataQC.multiple{1,3}{currThresh,1})) ;
                 for i=1:size(vals,1)
-                    if vals(i) > params.dataQC.multiple{1,3}{currThresh,2}
+                    if vals(i) > str2double(params.dataQC.multiple{1,3}{currThresh,2})
                         tags{i, currThresh} = 'include' ;
                     else; tags{i, currThresh} = 'exclude' ;
                     end
@@ -410,7 +410,7 @@ for currFile = 1:size(indxDataQC,2)
                 vals = resultsTab.(strrep(params.dataQC.multiple{2,1}, ...
                     'CONDITION', params.dataQC.multiple{2,3}{currThresh,1})) ;
                 for i=1:size(vals,1)
-                    if vals(i) > params.dataQC.multiple{2,3}{currThresh,2}
+                    if vals(i) > str2double(params.dataQC.multiple{2,3}{currThresh,2})
                         tags{i, currThresh} = 'include' ;
                     else; tags{i, currThresh} = 'exclude' ;
                     end
@@ -479,7 +479,9 @@ for currFile = 1:size(indxDataQC,2)
                         params.dataQC.badChanROIs{1,2}{i,1}{end} ' > ' ...
                         num2str(params.dataQC.badChanROIs{1,2}{i,2})] ;
                 end
+        else; roinames = cell(1,0) ;
         end
+
         
         % COMPILE THE TABLE OF ALL CRITERIA AND NAMES, SAVING IT TO A .CSV
         tabnames = [singlenames, tagnames, condnames, roinames, 'Across_Criteria'] ;
