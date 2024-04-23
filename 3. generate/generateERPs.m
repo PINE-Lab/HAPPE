@@ -161,7 +161,7 @@ for currfile=1:size(FileNames, 2)+1
                 end
             elseif strcmpi(params.chans.subset, 'all')
                 subChanIDs = setdiff(currsub.colheaders, 'Time') ;
-                if ~params.badChand.inc
+                if ~params.badChans.inc
                     subChanIDs = setdiff(subChanIDs, subBadChans) ; 
                 end
             end
