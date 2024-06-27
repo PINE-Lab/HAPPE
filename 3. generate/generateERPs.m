@@ -161,7 +161,7 @@ for currfile=1:size(FileNames, 2)+1
                 end
             elseif strcmpi(params.chans.subset, 'all')
                 subChanIDs = setdiff(currsub.colheaders, 'Time') ;
-                if ~params.badChand.inc
+                if ~params.badChans.inc
                     subChanIDs = setdiff(subChanIDs, subBadChans) ; 
                 end
             end
@@ -365,66 +365,68 @@ for currfile=1:size(FileNames, 2)+1
 end
 
 %% PLOT AVERAGE ERP WAVEFORMS
-aveToPlot = [] ;
-if params.indivTrials
-    for i=1:size(FileNames,2)
-        aveToPlot = [aveToPlot allSubsERP{i}(:,end-3)] ;                    %#ok<*AGROW> 
+if params.plot
+    aveToPlot = [] ;
+    if params.indivTrials
+        for i=1:size(FileNames,2)
+            aveToPlot = [aveToPlot allSubsERP{i}(:,end-3)] ;                    %#ok<*AGROW> 
+        end
+        aveToPlot = [aveToPlot allSubsERP{end}] ;
+    else
+        for i=1:size(allSubsERP,2)
+            aveToPlot = [aveToPlot allSubsERP{i}] ;
+        end
     end
-    aveToPlot = [aveToPlot allSubsERP{end}] ;
-else
-    for i=1:size(allSubsERP,2)
-        aveToPlot = [aveToPlot allSubsERP{i}] ;
+    if size(FileNames,2) > 1
+        tiledlayout(1,3) ;
+        tile1 = nexttile ;
+        p1 = plot(tile1, lats, aveToPlot(:,1:end-4)) ;
+        title(tile1, 'Average ERP Over Trials for Each File') ;
+        
+        tile2 = nexttile ;
+        p2 = plot(tile2, lats, [aveToPlot(:,end-3), ...
+            aveToPlot(:,end-3)-aveToPlot(:,end), ...
+            aveToPlot(:,end-3)+aveToPlot(:,end)], '--k') ;
+        p2(1).LineStyle = '-' ;
+        p2(1).Color = 'r' ;
+        title(tile2, 'Average ERP Across Files w/ Standard Error') ;
+        
+        tile3 = nexttile;
+        p3 = plot(tile3, lats, aveToPlot(:,1:end-3), 'k') ;
+        p3(end).Color = 'r' ;
+        title(tile3, 'All Files Average + Average Across Files') ;
+    else
+        plot(lats, aveToPlot(:,1)) ;
+        title('Average ERP for Individual File') ;
     end
-end
-if size(FileNames,2) > 1
-    tiledlayout(1,3) ;
-    tile1 = nexttile ;
-    p1 = plot(tile1, lats, aveToPlot(:,1:end-4)) ;
-    title(tile1, 'Average ERP Over Trials for Each File') ;
     
-    tile2 = nexttile ;
-    p2 = plot(tile2, lats, [aveToPlot(:,end-3), ...
-        aveToPlot(:,end-3)-aveToPlot(:,end), ...
-        aveToPlot(:,end-3)+aveToPlot(:,end)], '--k') ;
-    p2(1).LineStyle = '-' ;
-    p2(1).Color = 'r' ;
-    title(tile2, 'Average ERP Across Files w/ Standard Error') ;
+    %% PLOT TRIAL WAVEFORMS BY FILE
+    if params.indivTrials
+        for i=1:size(FileNames,2)
+            figure() ;
+            currPlot = allSubsERP{i} ;
+            if size(currPlot,2) > 1
+                tiledlayout(1,3) ;
+                tile1 = nexttile ;
+                p1 = plot(tile1, lats, currPlot(:,1:end-4)) ;
+                title(tile1, sprintf('ERP Per Trial for %s', FileNames{i})) ;
     
-    tile3 = nexttile;
-    p3 = plot(tile3, lats, aveToPlot(:,1:end-3), 'k') ;
-    p3(end).Color = 'r' ;
-    title(tile3, 'All Files Average + Average Across Files') ;
-else
-    plot(lats, aveToPlot(:,1)) ;
-    title('Average ERP for Individual File') ;
-end
-
-%% PLOT TRIAL WAVEFORMS BY FILE
-if params.indivTrials
-    for i=1:size(FileNames,2)
-        figure() ;
-        currPlot = allSubsERP{i} ;
-        if size(currPlot,2) > 1
-            tiledlayout(1,3) ;
-            tile1 = nexttile ;
-            p1 = plot(tile1, lats, currPlot(:,1:end-4)) ;
-            title(tile1, sprintf('ERP Per Trial for %s', FileNames{i})) ;
-
-            tile2 = nexttile ;
-            p2 = plot(tile2, lats, [currPlot(:,end-3), ...
-                currPlot(:,end-3)-currPlot(:,end), ...
-                currPlot(:,end-3)+currPlot(:,end)], '--k') ;
-            p2(1).LineStyle = '-' ;
-            p2(1).Color = 'r' ;
-            title(tile2, 'Average ERP Across Trials w/ Standard Error') ;
-
-            tile3 = nexttile;
-            p3 = plot(tile3, lats, currPlot(:,1:end-3), 'k') ;
-            p3(end).Color = 'r' ;
-            title(tile3, 'All Trials + Average Over Trials') ;
-        else
-            plot(lats, currPlot(:,1)) ;
-            title('ERP for Single Trial') ;
+                tile2 = nexttile ;
+                p2 = plot(tile2, lats, [currPlot(:,end-3), ...
+                    currPlot(:,end-3)-currPlot(:,end), ...
+                    currPlot(:,end-3)+currPlot(:,end)], '--k') ;
+                p2(1).LineStyle = '-' ;
+                p2(1).Color = 'r' ;
+                title(tile2, 'Average ERP Across Trials w/ Standard Error') ;
+    
+                tile3 = nexttile;
+                p3 = plot(tile3, lats, currPlot(:,1:end-3), 'k') ;
+                p3(end).Color = 'r' ;
+                title(tile3, 'All Trials + Average Over Trials') ;
+            else
+                plot(lats, currPlot(:,1)) ;
+                title('ERP for Single Trial') ;
+            end
         end
     end
 end
