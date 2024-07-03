@@ -101,7 +101,7 @@ fprintf('Preparing HAPPE...\n') ;
 % SET HAPPE AND EEGLAB PATHS USING THE RUNNING SCRIPT
 happeDir = strrep(fileparts(which(mfilename('fullpath'))), [filesep '1. ' ...
     'pre-process'], '') ;
-eeglabDir = [happeDir filesep 'packages' filesep 'eeglab2022.0'] ;
+eeglabDir = [happeDir filesep 'packages' filesep 'eeglab2024.0'] ;
 
 % ADD HAPPE AND REQUIRED FOLDERS TO PATH
 addpath([happeDir filesep '1. pre-process'], ...
