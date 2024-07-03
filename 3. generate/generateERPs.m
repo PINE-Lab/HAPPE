@@ -365,18 +365,18 @@ for currfile=1:size(FileNames, 2)+1
 end
 
 %% PLOT AVERAGE ERP WAVEFORMS
-if params.plot
-    aveToPlot = [] ;
-    if params.indivTrials
-        for i=1:size(FileNames,2)
-            aveToPlot = [aveToPlot allSubsERP{i}(:,end-3)] ;                    %#ok<*AGROW> 
-        end
-        aveToPlot = [aveToPlot allSubsERP{end}] ;
-    else
-        for i=1:size(allSubsERP,2)
-            aveToPlot = [aveToPlot allSubsERP{i}] ;
-        end
+aveToPlot = [] ;
+if params.indivTrials
+    for i=1:size(FileNames,2)
+        aveToPlot = [aveToPlot allSubsERP{i}(:,end-3)] ;                    %#ok<*AGROW> 
     end
+    aveToPlot = [aveToPlot allSubsERP{end}] ;
+else
+    for i=1:size(allSubsERP,2)
+        aveToPlot = [aveToPlot allSubsERP{i}] ;
+    end
+end
+if params.plot
     if size(FileNames,2) > 1
         tiledlayout(1,3) ;
         tile1 = nexttile ;
