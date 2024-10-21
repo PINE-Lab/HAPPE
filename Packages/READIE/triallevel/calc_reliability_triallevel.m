@@ -23,8 +23,7 @@ i=1;
 
 for j = 1:length(values_sequence)
     s = values_sequence(j);
-    
-    op_reliability = @(vals, conds) get_vals_triallevel(vals, conds, s, seed, true);
+    op_reliability = @(vals, conds) get_vals_triallevel(vals, conds, uq_conds, s, seed, true);
 
     % Apply the operation on the data using splitapply
     comp_res = splitapply(op_reliability, vals, conds, G); % size(res) = n_id*(n_cond*2)
@@ -55,8 +54,7 @@ parfor i = 2:num_iterations
 
     for j = 1:length(values_sequence)
         s = values_sequence(j);
-        
-        op_reliability = @(vals, conds) get_vals_triallevel(vals, conds, s, seed, true);
+        op_reliability = @(vals, conds) get_vals_triallevel(vals, conds, uq_conds, s, seed, true);
 
         % Apply the operation on the data using splitapply
         comp_res = splitapply(op_reliability, vals, conds, G); % size(res) = n_id*(n_cond*2)

@@ -16,8 +16,7 @@ parfor i = 1:num_iterations
     seed = randi(10000);
     corrs_row = zeros(1, length(colnames));
     corrs_row(find(colnames=="seed",1)) = seed;
-
-    op_reliability = @(vals, conds) get_vals_overall(vals, conds, seed, true);
+    op_reliability = @(vals, conds) get_vals_overall(vals, conds, uq_conds, seed, true);
 
     % Apply the operation on the data using splitapply
     comp_res = splitapply(op_reliability, vals, conds, G); % size(res) = n_id*(n_cond*2)

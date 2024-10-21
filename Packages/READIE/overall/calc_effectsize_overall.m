@@ -29,9 +29,7 @@ parfor i = 1:num_iterations
     seed = randi(10000);
     eff_row = zeros(1, length(colnames));
     eff_row(find(colnames=="seed",1)) = seed;
-    
-    op_effect = @(vals, conds) get_vals_overall(vals, conds, seed, false);
-    
+    op_effect = @(vals, conds) get_vals_overall(vals, conds, uq_conds, seed, false);    
     % Apply the operation on the data using splitapply
     comp_res = splitapply(op_effect, vals, conds, G);
     res = cell2mat(comp_res(:,1));

@@ -36,8 +36,7 @@ eff_row(find(colnames=="seed",1)) = seed;
 i=1;
 for j = 1:length(values_sequence)
     s = values_sequence(j);
-    
-    op_effect = @(vals, conds) get_vals_triallevel(vals, conds, s, seed, false);
+    op_effect = @(vals, conds) get_vals_triallevel(vals, conds, uq_conds, s, seed, false);
     
     % Apply the operation on the data using splitapply
     comp_res = splitapply(op_effect, vals, conds, G);
@@ -45,22 +44,32 @@ for j = 1:length(values_sequence)
     eff_names = comp_res{1,2};
     
     for k=1:length(uq_conds)
-        eff_idx = find(eff_names==uq_conds(k), 1);
-        eff = meanEffectSize(res(:, eff_idx));
         col = string(uq_conds(k)) + '_' + string(s);
         idx = find(colnames==col,1);
-        eff_row(idx) = eff.Effect;
         all_n(idx) = sum(~isnan(res(:,1)));
+        if (all_n(idx) < 2)
+            eff_row(idx) = NaN;
+            continue
+        end
+
+        eff_idx = find(eff_names==uq_conds(k), 1);
+        eff = meanEffectSize(res(:, eff_idx));
+        eff_row(idx) = eff.Effect;
     end
     size_comb = size(uq_combs);
     for k=1:size_comb(1)
+        col = sprintf("%s_%s", uq_combs(k,1), uq_combs(k,2)) + '_' + string(s);
+        idx = find(colnames==col,1);
+        all_n(idx) = sum(~isnan(res(:,1)));
+        if (all_n(idx) < 2)
+            eff_row(idx) = NaN;
+            continue
+        end
+
         eff_idx1 = find(eff_names==uq_combs(k,1), 1);
         eff_idx2 = find(eff_names==uq_combs(k,2), 1);
         eff = meanEffectSize(res(:, eff_idx1), res(:, eff_idx2));
-        col = sprintf("%s_%s", uq_combs(k,1), uq_combs(k,2)) + '_' + string(s);
-        idx = find(colnames==col,1);
         eff_row(idx) = eff.Effect;
-        all_n(idx) = sum(~isnan(res(:,1)));
     end
 end
 all_eff_mtx(i,:) = eff_row;
@@ -72,8 +81,7 @@ parfor i = 2:num_iterations
     eff_row(find(colnames=="seed",1)) = seed;
     for j = 1:ls
         s = values_sequence(j);
-        
-        op_effect = @(vals, conds) get_vals_triallevel(vals, conds, s, seed, false);
+        op_effect = @(vals, conds) get_vals_triallevel(vals, conds, uq_conds, s, seed, false);
         
         % Apply the operation on the data using splitapply
         comp_res = splitapply(op_effect, vals, conds, G);
@@ -81,21 +89,32 @@ parfor i = 2:num_iterations
         eff_names = comp_res{1,2};
         
         for k=1:length(uq_conds)
-            eff_idx = find(eff_names==uq_conds(k), 1);
-            eff = meanEffectSize(res(:, eff_idx));
             col = string(uq_conds(k)) + '_' + string(s);
             idx = find(colnames==col,1);
+            % all_n(idx) = sum(~isnan(res(:,1)));
+            if (all_n(idx) < 2)
+                eff_row(idx) = NaN;
+                continue
+            end
+    
+            eff_idx = find(eff_names==uq_conds(k), 1);
+            eff = meanEffectSize(res(:, eff_idx));
             eff_row(idx) = eff.Effect;
             % tmp = table(eff.Effect, 'VariableNames', uq_conds(k));
             % eff_row = horzcat(eff_row, tmp);
         end
         size_comb = size(uq_combs);
         for k=1:size_comb(1)
+            col = sprintf("%s_%s", uq_combs(k,1), uq_combs(k,2)) + '_' + string(s);
+            idx = find(colnames==col,1);
+            if (all_n(idx) < 2)
+                eff_row(idx) = NaN;
+                continue
+            end
+    
             eff_idx1 = find(eff_names==uq_combs(k,1), 1);
             eff_idx2 = find(eff_names==uq_combs(k,2), 1);
             eff = meanEffectSize(res(:, eff_idx1), res(:, eff_idx2));
-            col = sprintf("%s_%s", uq_combs(k,1), uq_combs(k,2)) + '_' + string(s);
-            idx = find(colnames==col,1);
             eff_row(idx) = eff.Effect;
         end
         % all_result_eff = vertcat(all_result_eff, eff_row)
