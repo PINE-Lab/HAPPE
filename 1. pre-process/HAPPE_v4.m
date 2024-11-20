@@ -101,7 +101,7 @@ fprintf('Preparing HAPPE...\n') ;
 % SET HAPPE AND EEGLAB PATHS USING THE RUNNING SCRIPT
 happeDir = strrep(fileparts(which(mfilename('fullpath'))), [filesep '1. ' ...
     'pre-process'], '') ;
-eeglabDir = [happeDir filesep 'packages' filesep 'eeglab2022.0'] ;
+eeglabDir = [happeDir filesep 'packages' filesep 'eeglab2024.0'] ;
 
 % ADD HAPPE AND REQUIRED FOLDERS TO PATH
 addpath([happeDir filesep '1. pre-process'], ...
@@ -483,8 +483,13 @@ for currFile = 1:length(FileNames)
                 % VALIDATE THAT THE EEG WAS CORRECTED CORRECTLY
                 EEG = eeg_checkset(EEG) ;
             elseif params.loadInfo.sys == 2
-                EEG = pop_select(EEG, 'channel', params.loadInfo.chanlocs.expected);
-                EEG.chanlocs = params.loadInfo.chanlocs.locs ;
+                EEG = pop_select(EEG, 'channel', intersect({EEG.chanlocs.labels}, ...
+                    params.loadInfo.chanlocs.expected));
+                for currLoc = 1:size({EEG.chanlocs.labels},2)
+                    newLocs(currLoc) = params.loadInfo.chanlocs.locs(find(strcmpi({params.loadInfo.chanlocs.locs.labels}, EEG.chanlocs(currLoc).labels))) ;
+                end
+                EEG.chanlocs = newLocs ;
+                clear newLocs ;
             end
             
             %% SET THE FLATLINE REFERENCE CHANNEL

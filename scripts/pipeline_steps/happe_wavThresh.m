@@ -97,6 +97,10 @@ else
     else; ThresholdRule = 'Hard' ;
     end
     
+    if ~isa(EEG.data, 'double')
+        EEG.data = double(EEG.data) ;
+    end
+
     % Use wavelet thresholding to determine artifacts in the data.
     artifacts = wdenoise(reshape(EEG.data, size(EEG.data, 1), [])', wavLvl, ...
         'Wavelet', wavFam, 'DenoisingMethod', 'Bayes', 'ThresholdRule', ...

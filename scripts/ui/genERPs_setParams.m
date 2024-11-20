@@ -48,17 +48,16 @@ while true
     %% IF CHANGING PARAMS...
     if changedParams
         fprintf(['Parameter to change: ave/indiv trials, channels of ' ...
-            'interest, bad channel inclusion, calculating values.\nEnter ' ...
-            '"done" (without quotations) when finished changing ' ...
+            'interest, bad channel inclusion, calculating values, plotting.' ...
+            '\nEnter "done" (without quotations) when finished changing ' ...
             'parameters.\n']) ;
         paramChoice = input('> ', 's') ;
     end
     
     %% DETERMINE IF RUNNING AVERAGE OR INDIVIDUAL TRIALS
     if ~preExist || strcmpi(paramChoice, 'ave/indiv trials')
-        fprintf(['Trial type:\n  average = Average over trials ' ...
-            '(AveOverTrials.txt)\n  individual = Individual trials ' ...
-            '(IndivTrial.txt)\n']) ;
+        fprintf(['Trial type:\n  average = Average over trials\n  ' ...
+            'individual = Individual trials\n']) ;
         params.indivTrials = choose2('average', 'individual') ;
         
         % SINGLE OR MULTIPLE FILES
@@ -158,6 +157,12 @@ while true
         end
     end
     
+    %% DETERMINE IF PLOTTING
+    if ~preExist || strcmpi(paramChoice,'plotting')
+        fprintf('Plot the ERP waveforms? [Y/N]\n') ;
+        params.plot = choose2('n','y') ;
+    end
+
     %% DONE
    if ~preExist || strcmpi(paramChoice, 'done')
        fprintf('Please check your parameters before continuing.\n') ;

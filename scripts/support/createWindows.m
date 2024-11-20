@@ -39,9 +39,10 @@
 % with HAPPE. If not, see <https://www.gnu.org/licenses/>.
 
 function [currSubWindows, currSubGlobal] = createWindows(lats, subAve_noBL, windows)
+lats = round(lats) ;
 currSubGlobal = [lats(find(lats==0):size(lats,1),:) subAve_noBL] ;
 currSubWindows =  {};
 for i=1:size(windows, 1)
-    currSubWindows{i} = currSubGlobal(find(currSubGlobal==str2num(windows{i,1})):find(currSubGlobal==str2num(windows{i,2})),:) ; %#ok<*AGROW> 
+    currSubWindows{i} = currSubGlobal(find(currSubGlobal==str2double(windows{i,1})):find(currSubGlobal==str2double(windows{i,2})),:) ; %#ok<*AGROW> 
 end
 end
