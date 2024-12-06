@@ -1096,14 +1096,14 @@ for currFile = 1:length(FileNames)
                 end
             end
         end
-       if params.outputFormat == 1
+        if params.outputFormat == 1
             pop_export(EEG, strrep(FileNames{currFile}, inputExt, ...
                 ['_processed_IndivTrial' rerunExt '.txt']), ...
                 'transpose', 'on', 'precision', 8) ;
             pop_export(EEG, strrep(FileNames{currFile}, inputExt, ...
                 ['_processed_AveOverTrials' rerunExt '.txt']), ...
                 'transpose', 'on', 'erp', 'on', 'precision', 8) ;
-            if size(params.paradigm.onsetTags, 2) > 1
+            if params.paradigm.task && size(params.paradigm.onsetTags, 2) > 1
                 for i=1:size(eegByTags, 2)
                     if ~isempty(eegByTags{i})
                         pop_export(eegByTags{i}, strrep(FileNames{currFile}, ...
