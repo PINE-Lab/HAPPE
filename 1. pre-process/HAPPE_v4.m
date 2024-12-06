@@ -1096,7 +1096,7 @@ for currFile = 1:length(FileNames)
                 end
             end
         end
-       if params.outputFormat == 1
+        if params.outputFormat == 1
             pop_export(EEG, strrep(FileNames{currFile}, inputExt, ...
                 ['_processed_IndivTrial' rerunExt '.txt']), ...
                 'transpose', 'on', 'precision', 8) ;
