@@ -491,7 +491,13 @@ for currFile = 1:length(FileNames)
                 EEG.chanlocs = newLocs ;
                 clear newLocs ;
             end
-            
+
+            %% TRANSPOSE CHANNELS, IF NEEDED
+            % Channels need to be transposed to row format for low density
+            if params.loadInfo.chanlocs.inc && iscolumn(EEG.chanlocs)
+                EEG.chanlocs = transpose(EEG.chanlocs)
+            end
+
             %% SET THE FLATLINE REFERENCE CHANNEL
             % If the reference channel is included in the data, remove it
             % from the data channels. This will prevent it from being 
