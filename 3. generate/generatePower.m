@@ -401,6 +401,14 @@ end
 
 errorLog = {} ;
 
+% ABBREVIATE LONG FILE NAMES
+outputFileNames = FileNames ;
+for i=1:size(FileNames,2)
+    if size(FileNames{i},2) > 30
+        outputFileNames{i} = [FileNames{i}(1:30-3) '...'] ;
+    end
+end
+
 %% RUN CALCULATIONS ON EACH FILE
 for currFile = 1:size(FileNames,2)
     try
@@ -475,7 +483,7 @@ for currFile = 1:size(FileNames,2)
             end
             allSubs{currFile, 1} = psd ;
         catch ME; fprintf(2, ['ERROR: Unable to calculate multitaper PSD ' ...
-                'for ' FileNames{currFile} '.\n ']) ;
+                'for ' outputFileNames{currFile} '.\n ']) ;
             rethrow(ME) ;
         end
 
@@ -487,7 +495,7 @@ for currFile = 1:size(FileNames,2)
             psdHigh_ave = mean(psdHigh,3)' ;
             allSubs{currFile,2} = psd_ave ;
         catch ME; fprintf(2, ['ERROR: Unable to calculate average PSD ' ...
-                'for ' FileNames{currFile} '.\n ']) ;
+                'for ' outputFileNames{currFile} '.\n ']) ;
             rethrow(ME) ;
         end
         
@@ -1090,7 +1098,7 @@ for currFile = 1:size(FileNames,2)
                 name{1:end-1}) 'Line ' num2str(line{end}) ' in ' name{end}] ;
         else; errList = ['Line ' num2str(line{1}) ' in ' name] ;
         end
-        errorLog = [errorLog; {FileNames{currFile}, ME.message, errList}] ;
+        errorLog = [errorLog; {outputFileNames{currFile}, ME.message, errList}] ;
     end
 end
 
@@ -1112,14 +1120,14 @@ end
 fprintf('Saving information from all files...\n') ;
 for currROI=1:size(params.rois,2)
     writetable(array2table(subLvl_PSD{currROI}(freqMin:freqMax,:), ...
-        'VariableNames', FileNames, 'RowNames', cellstr(num2str(f(freqMin:freqMax)))), ...
+        'VariableNames', outputFileNames, 'RowNames', cellstr(num2str(f(freqMin:freqMax)))), ...
         helpName([srcDir filesep 'generatePower' filesep 'allSubs' filesep ...
         'allSubs_PSD_' params.rois{3, currROI} '.csv'], '.csv'), ...
         'WriteRowNames', true, 'QuoteStrings', true) ;
 
     if params.bands.on
         writetable(array2table(subLvl_bandpower{1,currROI}, 'VariableNames', ...
-            subLvl_bandpower{2,currROI}, 'RowNames', FileNames'), helpName([srcDir ...
+            subLvl_bandpower{2,currROI}, 'RowNames', outputFileNames'), helpName([srcDir ...
             filesep 'generatePower' filesep 'allSubs' filesep 'allSubs_bandpower_' ...
             params.rois{3, currROI} '.csv'], '.csv'), 'WriteRowNames', true, ...
             'QuoteStrings', true) ;
@@ -1127,7 +1135,7 @@ for currROI=1:size(params.rois,2)
 
     if params.specparam.on && ismember(currROI, filteredROIindxs)
         writetable(array2table(subLvl_specparam{1,currROI}, 'VariableNames', ...
-            subLvl_specparam{2,currROI}, 'RowNames', FileNames'), ...
+            subLvl_specparam{2,currROI}, 'RowNames', outputFileNames'), ...
             helpName([srcDir filesep 'generatePower' filesep 'allSubs' ...
             filesep 'allSubs_specparam_' params.rois{3,currROI} '.csv'], ...
             '.csv'), 'WriteRowNames', true, 'QuoteStrings', true) ;
