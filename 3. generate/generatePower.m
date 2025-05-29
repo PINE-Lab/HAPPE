@@ -122,7 +122,7 @@ while true
             'bands, specparam,\nspecparam outputs, specparam python, ' ...
             'specparam spectrum bounds,\nspecparam peak width, ' ...
             'specparam peak number, specparam peak height,\nspecparam ' ...
-            'peak threshold, specparam mode, specparam peaks by freq bands\n' ...
+            'peak threshold, specparam mode, specparam pwe, specparam peaks by freq bands\n' ...
             'Enter "done" (without quotations) when finished changing ' ...
             'parameters.\n']) ;
         userChoice = input('> ', 's') ;
@@ -233,7 +233,7 @@ while true
             end
         else; params.specparam.splitROI.on = 0;
         end
-        
+
         % Determine if enabling visualizations during the run. Only
         % recommended for a single file with a small ROI for testing
         % reasons as it can dramatically slow down processing and result in
@@ -244,6 +244,13 @@ while true
         else; params.specparam.vis = 0 ;
         end
     end
+
+    % Determine if returning pointwise error
+    if params.specparam.on && (~preExist || strcmpi(userChoice, 'specparam pwe'))
+        fprintf('Calculate pointwise error? [Y/N]\n') ;
+        params.specparam.pwe = choose2('N', 'Y') ;
+    end
+
     % Determine Python Version:
     % Get the python version installed on the user's computer. For Windows,
     % the version number is sufficient. For Mac and Linux computers, you
@@ -757,18 +764,18 @@ for currFile = 1:size(FileNames,2)
                     for currSeg=1:EEG.trials
                         currPSD = psd(setdiff(chanIndxs{currROI}, zeroChanIndxs), ...
                             :, currSeg) ;
-                        allSubs{currFile,4}{currSeg,currROI} = fooof_group(f', ...
+                        allSubs{currFile,4}{currSeg,currROI} = calcFooof(f', ...
                             [currPSD; mean(currPSD)]', [params.specparam.min ...
                             params.specparam.max], params.specparam.settings, ...
-                            true) ;
+                            true, false) ;
                     end
                 end
         
                 % Specparam on average psd
                 currPSD = psd_ave(:, setdiff(chanIndxs{currROI}, zeroChanIndxs)) ;
-                allSubs{currFile,4}{end,currROI} = fooof_group(f', [currPSD, ...
+                allSubs{currFile,4}{end,currROI} = calcFooof(f', [currPSD, ...
                     mean(currPSD,2)], [params.specparam.min params.specparam.max], ...
-                    params.specparam.settings, true) ;
+                    params.specparam.settings, true, params.specparam.pwe) ;
             end
     
             % output results
@@ -834,12 +841,30 @@ for currFile = 1:size(FileNames,2)
                             'specparam_IndivTrials' filesep strrep(FileNames{currFile}, ...
                             '.set', '_indivTrialsSpecparam.csv')], '.csv') ;
                 end
+                % Create base savenames for pointwise error file
+                if size(params.rois,2) > 1 && params.specparam.splitROI.on && params.specparam.pwe
+                    if params.specparam.splitROI.csvFormat
+                        saveNamePWE = [srcDir filesep 'generatePower' filesep ...
+                            'specparam_IndivTrials' filesep strrep(FileNames{currFile}, ...
+                            '.set', '_indivTrialsSpecparam_PWE_ROI.csv')] ;
+                    else
+                        saveNamePWE = helpName([srcDir filesep 'generatePower' filesep ...
+                            'specparam_IndivTrials' filesep strrep(FileNames{currFile}, ...
+                            '.set', '_indivTrialsSpecparam_PWE.xlsx')], '.xlsx') ;
+                    end
+                elseif params.specparam.pwe
+                    saveNamePWE = helpName([srcDir filesep 'generatePower' filesep ...
+                            'specparam_IndivTrials' filesep strrep(FileNames{currFile}, ...
+                            '.set', '_indivTrialsSpecparam_PWE.csv')], '.csv') ;
+                end
                 if ~params.specparam.splitROI.on; sp_outCols_all = [] ; sp_allMets_all = []; end
             
                 for currROI=1:size(filteredROIindxs,2)
                     roiSize = size(allSubs{currFile,4}{1, filteredROIindxs(currROI)},2) ;
                     sp_allMets = [] ;
                     sp_outCols = [] ;
+                    sp_allPWE = [] ;
+                    sp_pwe = [] ;
                     for currChan=1:roiSize
                         sp_aper = [] ;
                         sp_peaks = [] ;
@@ -867,7 +892,12 @@ for currFile = 1:size(FileNames,2)
                                 filteredROIindxs(currROI)}(currChan).error ;
                             sp_r{currSeg} = allSubs{currFile,4}{currSeg, ...
                                 filteredROIindxs(currROI)}(currChan).r_squared ;
-            
+                            
+                            if params.specparam.pwe
+                                sp_pwe = [sp_pwe; allSubs{currFile,4}{currSeg, ...
+                                    filteredROIindxs(currROI)}(currChan).pointwise_error] ;
+                            end
+
                             if params.specparam.bands.on
                                 for i=1:size(params.specparam.bands.vals,1)
                                     for j=1:size(currCell,1)
@@ -901,6 +931,9 @@ for currFile = 1:size(FileNames,2)
                         end
                         sp_allMets = [sp_allMets sp_allMets_temp] ;
                         sp_outCols = [sp_outCols sp_outCols_chan] ;
+                        if params.specparam.pwe
+                            sp_allPWE = [sp_allPWE sp_pwe] ;
+                        end
                     end
                     if params.specparam.splitROI.on
                         % append tag to savename and print
@@ -911,11 +944,23 @@ for currFile = 1:size(FileNames,2)
                                 sp_outCols, 'RowNames', sp_outRows), ...
                                 helpName(saveName2, '.csv'), 'WriteRowNames', true, ...
                                 'QuoteStrings', true) ;
+                            if params.specparam.pwe
+                                saveName2PWE  = strrep(saveNamePWE, 'ROI', params.rois{3, ...
+                                filteredROIindxs(currROI)}) ;
+                                writetable(array2table(sp_pwe), ...
+                                    helpName(saveName2PWE, '.csv'), 'WriteRowNames', true, ...
+                                    'QuoteStrings', true) ;
+                            end
                         else
                             writetable(array2table(sp_allMets, 'VariableNames', ...
                                 sp_outCols, 'RowNames', sp_outRows), saveName, 'Sheet', ...
                                 params.rois{3, filteredROIindxs(currROI)}, ...
                                 'WriteRowNames', true) ;
+                            if params.specparam.pwe
+                                writetable(array2table(sp_pwe), saveNamePWE, 'Sheet', ...
+                                    params.rois{3, filteredROIindxs(currROI)}, ...
+                                    'WriteRowNames', true) ;
+                            end
                         end
                     else
                         % affix ROI to VarNames and concat output matrix
@@ -935,6 +980,10 @@ for currFile = 1:size(FileNames,2)
                     writetable(array2table(sp_allMets_all, 'VariableNames', ...
                         sp_outCols_all, 'RowNames', sp_outRows), saveName, ...
                         'WriteRowNames', true, 'QuoteStrings', true) ;
+                    if params.specparam.pwe
+                        writetable(array2table(sp_allPWE), saveName, ...
+                            'WriteRowNames', true, 'QuoteStrings', true) ;
+                    end
                 end
             else
                 if currFile==1
@@ -972,11 +1021,29 @@ for currFile = 1:size(FileNames,2)
                             'specparam_AveOverTrials' filesep strrep(FileNames{currFile}, ...
                             '.set', '_aveSpecparam.csv')], '.csv') ;
                 end
+                % Create base savename for the pointwise error file
+                if size(params.rois,2) > 1 && params.specparam.splitROI.on && params.specparam.pwe
+                    if params.specparam.splitROI.csvFormat
+                        saveNamePWE = [srcDir filesep 'generatePower' filesep ...
+                            'specparam_AveOverTrials' filesep strrep(FileNames{currFile}, ...
+                            '.set', '_aveSpecparam_PWE_ROI.csv')] ;
+                    else
+                        saveNamePWE = helpName([srcDir filesep 'generatePower' filesep ...
+                            'specparam_AveOverTrials' filesep strrep(FileNames{currFile}, ...
+                            '.set', '_aveSpecparam_PWE.xlsx')], '.xlsx') ;
+                    end
+                elseif params.specparam.pwe
+                    saveNamePWE = helpName([srcDir filesep 'generatePower' filesep ...
+                            'specparam_AveOverTrials' filesep strrep(FileNames{currFile}, ...
+                            '.set', '_aveSpecparam_PWE.csv')], '.csv') ;
+                end
+
             
 %                 if params.specparam.splitROI.on
                     sp_outMat = [] ;
 %                 end
                 sp_outRows = [] ;
+                sp_pwe = [] ;
                 for currROI=1:size(filteredROIindxs,2)
                     roiSize = size(allSubs{currFile,4}{1, filteredROIindxs(currROI)},2) ;
                     % DO MATRIX CALCULATION STUFF
@@ -987,6 +1054,11 @@ for currFile = 1:size(FileNames,2)
                         sp_aper = [sp_aper; currCell{i}] ;                      
                     end
                     
+                    % Pointwise error
+                    if params.specparam.pwe
+                        sp_pwe_temp = cat(1, allSubs{currFile,4}{end, filteredROIindxs(currROI)}.pointwise_error) ;
+                    end
+
                     % Peak Info
                     currCell = {allSubs{currFile,4}{end, filteredROIindxs(currROI)}.peak_params} ;
                     sp_peaks = zeros(size(currCell,2),params.specparam.settings.max_n_peaks*3) ;
@@ -1037,11 +1109,23 @@ for currFile = 1:size(FileNames,2)
                                 sp_outCols_orig, 'RowNames', sp_outRows'), ...
                                 helpName(saveName2, '.csv'), 'WriteRowNames', true, ...
                                 'QuoteStrings', true) ;
+                            if params.specparam.pwe
+                                saveName2pwe = strrep(saveNamePWE, 'ROI', ...
+                                    params.rois{3, filteredROIindxs(currROI)}) ;
+                                writetable(array2table(sp_pwe_temp), ...
+                                    helpName(saveName2pwe, '.csv'), 'WriteRowNames', true, ...
+                                    'QuoteStrings', true) ;
+                            end
                         else
                             writetable(array2table(sp_outMat_temp, 'VariableNames', ...
                                 sp_outCols_orig, 'RowNames', sp_outRows'), ...
                                 saveName, 'Sheet', params.rois{3, filteredROIindxs(currROI)}, ...
                                 'WriteRowNames', true) ;
+                            if params.specparam.pwe
+                                writetable(array2table(sp_pwe_temp), ...
+                                    saveNamePWE, 'Sheet', params.rois{3, filteredROIindxs(currROI)}, ...
+                                    'WriteRowNames', true) ;
+                            end
                         end
                     % IF NOT SPLITTING, APPEND ROI TAG TO ROW NAMES
                     else
@@ -1056,6 +1140,7 @@ for currFile = 1:size(FileNames,2)
             
                         % Concat and update output matrix
                         sp_outMat = [sp_outMat; sp_outMat_temp] ;
+                        sp_pwe = [sp_pwe; sp_pwe_temp] ;
                     end
                     if ~params.specparam.method(1)
                         tempBand = [] ;
@@ -1086,6 +1171,9 @@ for currFile = 1:size(FileNames,2)
                     writetable(array2table(sp_outMat, 'VariableNames', sp_outCols_orig, ...
                         'RowNames', sp_outRows'), saveName, 'WriteRowNames', true, ...
                         'QuoteStrings', true) ;
+                    if params.specparam.pwe
+                        writetable(array2table(sp_pwe), saveNamePWE,'QuoteStrings', true) ;
+                    end
                 end
             end
 
@@ -1234,16 +1322,17 @@ function genPower_listParams(params)
     
     fprintf('Calculate Specparam: ') ;
     if params.specparam.on
-        fprintf(['On\n - Python Version: ' num2str(params.specparam.pyVers) ...
-            '\n - Calculate for Individual Trials/Segments: ']) ;
+        fprintf(['On\n - Python Version: %s'  ...
+            '\n - Calculate for Individual Trials/Segments: '], num2str(params.specparam.pyVers)) ;
         if params.specparam.method(1); fprintf('On\n'); else; fprintf('Off\n') ; end
         fprintf(' - Calculate for Average of Trials/Segments: ');
         if params.specparam.method(2); fprintf('On\n'); else; fprintf('Off\n') ; end
+        fprintf(' - Calculate pointwise error: ')
+        if params.specparam.pwe; fprintf('On\n'); else; fprintf('Off\n') ; end
         fprintf(' - Visualizations: ')
         if params.specparam.vis; fprintf('On\n'); else; fprintf('Off\n') ; end
-        if ispc; fprintf([' - Python Version: ' params.specparam.pyVers '\n']) ;
-        else; fprintf([' - Path to Python Executable: ' params.specparam.pyVers ...
-                '/n']) ;
+        if ispc; fprintf(' - Python Version: %s\n', params.specparam.pyVers) ;
+        else; fprintf(' - Path to Python Executable: %s\n', params.specparam.pyVers) ;
         end
         fprintf([' - Spectrum Limits: ' num2str(params.specparam.min) ' Hz - ' ...
             num2str(params.specparam.max) ' Hz\n - Peak Width Limits: ' ...
