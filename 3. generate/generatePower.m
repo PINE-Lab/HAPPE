@@ -408,11 +408,12 @@ end
 
 errorLog = {} ;
 
-% ABBREVIATE LONG FILE NAMES
+%% ABBREVIATE LONG FILE NAMES
+% Used in error log and when the filenames are column names
 outputFileNames = FileNames ;
 for i=1:size(FileNames,2)
-    if size(FileNames{i},2) > 30
-        outputFileNames{i} = [FileNames{i}(1:30-3) '...'] ;
+    if size(FileNames{i},2) > 63
+        outputFileNames{i} = [FileNames{i}(1:63-3) '...'] ;
     end
 end
 
@@ -1215,7 +1216,7 @@ for currROI=1:size(params.rois,2)
 
     if params.bands.on
         writetable(array2table(subLvl_bandpower{1,currROI}, 'VariableNames', ...
-            subLvl_bandpower{2,currROI}, 'RowNames', outputFileNames'), helpName([srcDir ...
+            subLvl_bandpower{2,currROI}, 'RowNames', FileNames'), helpName([srcDir ...
             filesep 'generatePower' filesep 'allSubs' filesep 'allSubs_bandpower_' ...
             params.rois{3, currROI} '.csv'], '.csv'), 'WriteRowNames', true, ...
             'QuoteStrings', true) ;
@@ -1223,7 +1224,7 @@ for currROI=1:size(params.rois,2)
 
     if params.specparam.on && ismember(currROI, filteredROIindxs)
         writetable(array2table(subLvl_specparam{1,currROI}, 'VariableNames', ...
-            subLvl_specparam{2,currROI}, 'RowNames', outputFileNames'), ...
+            subLvl_specparam{2,currROI}, 'RowNames', FileNames'), ...
             helpName([srcDir filesep 'generatePower' filesep 'allSubs' ...
             filesep 'allSubs_specparam_' params.rois{3,currROI} '.csv'], ...
             '.csv'), 'WriteRowNames', true, 'QuoteStrings', true) ;
