@@ -768,7 +768,7 @@ for currFile = 1:size(FileNames,2)
                         allSubs{currFile,4}{currSeg,currROI} = calcFooof(f', ...
                             [currPSD; mean(currPSD)]', [params.specparam.min ...
                             params.specparam.max], params.specparam.settings, ...
-                            true, false) ;
+                            true, params.specparam.pwe) ;
                     end
                 end
         
@@ -865,12 +865,12 @@ for currFile = 1:size(FileNames,2)
                     sp_allMets = [] ;
                     sp_outCols = [] ;
                     sp_allPWE = [] ;
-                    sp_pwe = [] ;
                     for currChan=1:roiSize
                         sp_aper = [] ;
                         sp_peaks = [] ;
                         sp_error = cell(EEG.trials+1,1) ;
                         sp_r = cell(EEG.trials+1,1) ;
+                        sp_pwe = [] ;
                         if params.specparam.bands.on
                             sp_bandpeaks = cell(EEG.trials+1,size(params.specparam.bands.vals,1)) ;
                         end
@@ -933,7 +933,7 @@ for currFile = 1:size(FileNames,2)
                         sp_allMets = [sp_allMets sp_allMets_temp] ;
                         sp_outCols = [sp_outCols sp_outCols_chan] ;
                         if params.specparam.pwe
-                            sp_allPWE = [sp_allPWE sp_pwe] ;
+                            sp_allPWE = [sp_allPWE; sp_pwe] ;
                         end
                     end
                     if params.specparam.splitROI.on
@@ -948,7 +948,7 @@ for currFile = 1:size(FileNames,2)
                             if params.specparam.pwe
                                 saveName2PWE  = strrep(saveNamePWE, 'ROI', params.rois{3, ...
                                 filteredROIindxs(currROI)}) ;
-                                writetable(array2table(sp_pwe), ...
+                                writetable(array2table(sp_pwe, 'RowNames', sp_outRows), ...
                                     helpName(saveName2PWE, '.csv'), 'WriteRowNames', true, ...
                                     'QuoteStrings', true) ;
                             end
@@ -958,7 +958,8 @@ for currFile = 1:size(FileNames,2)
                                 params.rois{3, filteredROIindxs(currROI)}, ...
                                 'WriteRowNames', true) ;
                             if params.specparam.pwe
-                                writetable(array2table(sp_pwe), saveNamePWE, 'Sheet', ...
+                                writetable(array2table(sp_pwe, 'RowNames', sp_outRows), ...
+                                    saveNamePWE, 'Sheet', ...
                                     params.rois{3, filteredROIindxs(currROI)}, ...
                                     'WriteRowNames', true) ;
                             end
@@ -982,8 +983,8 @@ for currFile = 1:size(FileNames,2)
                         sp_outCols_all, 'RowNames', sp_outRows), saveName, ...
                         'WriteRowNames', true, 'QuoteStrings', true) ;
                     if params.specparam.pwe
-                        writetable(array2table(sp_allPWE), saveName, ...
-                            'WriteRowNames', true, 'QuoteStrings', true) ;
+                        writetable(array2table(sp_allPWE, 'RowNames', sp_outRows), ...
+                            saveName, 'WriteRowNames', true, 'QuoteStrings', true) ;
                     end
                 end
             else
@@ -1113,7 +1114,7 @@ for currFile = 1:size(FileNames,2)
                             if params.specparam.pwe
                                 saveName2pwe = strrep(saveNamePWE, 'ROI', ...
                                     params.rois{3, filteredROIindxs(currROI)}) ;
-                                writetable(array2table(sp_pwe_temp), ...
+                                writetable(array2table(sp_pwe_temp, 'RowNames', sp_outRows'), ...
                                     helpName(saveName2pwe, '.csv'), 'WriteRowNames', true, ...
                                     'QuoteStrings', true) ;
                             end
@@ -1123,7 +1124,7 @@ for currFile = 1:size(FileNames,2)
                                 saveName, 'Sheet', params.rois{3, filteredROIindxs(currROI)}, ...
                                 'WriteRowNames', true) ;
                             if params.specparam.pwe
-                                writetable(array2table(sp_pwe_temp), ...
+                                writetable(array2table(sp_pwe_temp, 'RowNames', sp_outRows'), ...
                                     saveNamePWE, 'Sheet', params.rois{3, filteredROIindxs(currROI)}, ...
                                     'WriteRowNames', true) ;
                             end
