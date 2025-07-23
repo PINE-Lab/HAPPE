@@ -193,7 +193,7 @@ for currfile=1:size(FileNames, 2)+1
         else; endInd = 0; 
         end
         for i = 1:size(FileNames,2)
-            temp = [temp allSubsERP{i}(:,end-endInd)] ;
+            temp = [temp allSubsERP{i}(:,max(end-endInd,0)] ;
         end
         allSubsERP{end} = mean(temp,2,'omitnan') ;
         trialBounds = [1 size(allSubsERP{end},1)] ;
