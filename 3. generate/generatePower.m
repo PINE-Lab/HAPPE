@@ -414,7 +414,13 @@ errorLog = {} ;
 outputFileNames = FileNames ;
 for i=1:size(FileNames,2)
     if size(FileNames{i},2) > 63
-        outputFileNames{i} = [FileNames{i}(1:63-3) '...'] ;
+        newName = [FileNames{i}(1:63-3) '...'] ;
+        collision_count = 1;
+        while ismember(newName, outputFileNames)
+            newName = [newName(1:63-7) '...(' num2str(collision_count), ')'] ;
+            collision_count = collision_count + 1 ; 
+        end
+        outputFileNames{i} =  newName ;
     end
 end
 
