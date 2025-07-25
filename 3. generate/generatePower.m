@@ -417,7 +417,7 @@ for i=1:size(FileNames,2)
         newName = [FileNames{i}(1:63-3) '...'] ;
         collision_count = 1;
         while ismember(newName, outputFileNames)
-            newName = [newName(1:63-7) '...(' num2str(collision_count), ')'] ;
+            newName = [newName(1:63-7) '...(' num2str(collision_count) ')'] ;
             collision_count = collision_count + 1 ; 
         end
         outputFileNames{i} =  newName ;
