@@ -405,6 +405,10 @@ subLvl_specparam = cell(2, size(params.rois,2)) ;
 for i=1:size(subLvl_specparam,2)
     subLvl_specparam{1,i} = {} ;
 end
+subLvl_PWE = cell(2, size(params.rois,2)) ;
+% for i=1:size(subLvl_PWE,2)
+%     subLvl_PWE{1,i} = {} ;
+% end
 
 FNFooofMask = true(size(FileNames,2),1) ; 
 errorLog = {} ;
@@ -834,6 +838,10 @@ for currFile = 1:size(FileNames,2)
                             '_peaks']] ;
                 end
             end
+            if params.specparam.pwe
+                sp_outCols_pwe_orig = string(allSubs{currFile,4}{currSeg, ...
+                                filteredROIindxs(1)}(1).freqs) + "Hz" ;
+            end
 
             % Print out individual trials
             if params.specparam.method(1)
@@ -875,13 +883,16 @@ for currFile = 1:size(FileNames,2)
                             'specparam_IndivTrials' filesep strrep(FileNames{currFile}, ...
                             '.set', '_indivTrialsSpecparam_PWE.csv')], '.csv') ;
                 end
-                if ~params.specparam.splitROI.on; sp_outCols_all = [] ; sp_allMets_all = []; end
+                if ~params.specparam.splitROI.on; sp_outCols_all = [] ; sp_allMets_all = [] ; end
+                if params.specparam.pwe & ~params.specparam.splitROI.on ; sp_outCols_allPwe_all = [] ;
+                    sp_allPWE_all = [] ; end
             
                 for currROI=1:size(filteredROIindxs,2)
                     roiSize = size(allSubs{currFile,4}{1, filteredROIindxs(currROI)},2) ;
                     sp_allMets = [] ;
                     sp_outCols = [] ;
                     sp_allPWE = [] ;
+                    sp_outCols_allPwe = [] ;
                     for currChan=1:roiSize
                         sp_aper = [] ;
                         sp_peaks = [] ;
@@ -935,7 +946,7 @@ for currFile = 1:size(FileNames,2)
                                     end
                                 end
                             end
-                        end
+                        end % epoch loop
                         sp_outCols_chan = cell(1, size(sp_outCols_orig,2)) ;
                         if currChan > roiSize-1; addOn = 'Average' ;
                         else; addOn = varNames{chanIndxs{filteredROIindxs(currROI)}(currChan)} ;
@@ -950,9 +961,14 @@ for currFile = 1:size(FileNames,2)
                         sp_allMets = [sp_allMets sp_allMets_temp] ;
                         sp_outCols = [sp_outCols sp_outCols_chan] ;
                         if params.specparam.pwe
-                            sp_allPWE = [sp_allPWE; sp_pwe] ;
+                            sp_outCols_pwe = cell(1, size(sp_outCols_pwe_orig,2)) ;
+                            for i=1:size(sp_outCols_pwe_orig,2)
+                                sp_outCols_pwe{1,i} = addOn + "_" + sp_outCols_pwe_orig{1,i} ;
+                            end
+                            sp_allPWE = [sp_allPWE sp_pwe] ;
+                            sp_outCols_allPwe = [sp_outCols_allPwe sp_outCols_pwe] ;
                         end
-                    end
+                    end % chan loop
                     if params.specparam.splitROI.on
                         % append tag to savename and print
                         if params.specparam.splitROI.csvFormat
@@ -965,7 +981,8 @@ for currFile = 1:size(FileNames,2)
                             if params.specparam.pwe
                                 saveName2PWE  = strrep(saveNamePWE, 'ROI', params.rois{3, ...
                                 filteredROIindxs(currROI)}) ;
-                                writetable(array2table(sp_pwe, 'RowNames', sp_outRows), ...
+                                writetable(array2table(sp_allPWE, 'VariableNames', ...
+                                    cellstr(sp_outCols_allPwe), 'RowNames', sp_outRows), ...
                                     helpName(saveName2PWE, '.csv'), 'WriteRowNames', true, ...
                                     'QuoteStrings', true) ;
                             end
@@ -975,7 +992,8 @@ for currFile = 1:size(FileNames,2)
                                 params.rois{3, filteredROIindxs(currROI)}, ...
                                 'WriteRowNames', true) ;
                             if params.specparam.pwe
-                                writetable(array2table(sp_pwe, 'RowNames', sp_outRows), ...
+                                writetable(array2table(sp_allPWE, 'VariableNames', ...
+                                    cellstr(sp_outCols_allPwe), 'RowNames', sp_outRows), ...
                                     saveNamePWE, 'Sheet', ...
                                     params.rois{3, filteredROIindxs(currROI)}, ...
                                     'WriteRowNames', true) ;
@@ -983,25 +1001,38 @@ for currFile = 1:size(FileNames,2)
                         end
                     else
                         % affix ROI to VarNames and concat output matrix
+                        addOnRoi = (params.rois{3, filteredROIindxs(currROI)} + "_") ;
                         for i=1:size(sp_outCols, 2)
                             sp_outCols{1,i} = [params.rois{3, filteredROIindxs(currROI)} ...
                                 '_' sp_outCols{1,i}] ;
                         end
                         sp_outCols_all = [sp_outCols_all sp_outCols] ;
                         sp_allMets_all = [sp_allMets_all sp_allMets] ;
+                        if params.specparam.pwe
+                            sp_allPWE_all = [sp_allPWE_all sp_allPWE] ;
+                            for i=1:size(sp_outCols_allPwe, 2)
+                                sp_outCols_allPwe{1,i} = addOnRoi + sp_outCols_allPwe{1,i} ;
+                            end
+                            sp_outCols_allPwe_all = [sp_outCols_allPwe_all sp_outCols_allPwe] ;
+                        end
                     end
                     if currFile == 1
                         subLvl_specparam{2,currROI} = sp_outCols ;
+                        if params.specparam.pwe ; subLvl_PWE{2,currROI} = sp_outCols_allPwe ; end
                     end
                     subLvl_specparam{1,currROI} = [subLvl_specparam{1,currROI}; sp_allMets(end,:)] ;
-                end
+                    if params.specparam.pwe 
+                        subLvl_PWE{1,currROI} = [subLvl_PWE{1,currROI}; sp_allPWE(end,:)] ; 
+                    end
+                end % roi loop
                 if ~params.specparam.splitROI.on
                     writetable(array2table(sp_allMets_all, 'VariableNames', ...
                         sp_outCols_all, 'RowNames', sp_outRows), saveName, ...
                         'WriteRowNames', true, 'QuoteStrings', true) ;
                     if params.specparam.pwe
-                        writetable(array2table(sp_allPWE, 'RowNames', sp_outRows), ...
-                            saveName, 'WriteRowNames', true, 'QuoteStrings', true) ;
+                        writetable(array2table(sp_allPWE_all, 'VariableNames', ...
+                            cellstr(sp_outCols_allPwe_all), 'RowNames', sp_outRows), ...
+                            saveNamePWE, 'WriteRowNames', true, 'QuoteStrings', true) ;
                     end
                 end
             else
@@ -1017,6 +1048,12 @@ for currFile = 1:size(FileNames,2)
                                 sp_outCols_chan{1,i} = [addOn '_' sp_outCols_orig{1,i}] ;
                             end
                             subLvl_specparam{2,currROI} = [subLvl_specparam{2,currROI} sp_outCols_chan] ;
+
+                            sp_outCols_pwe = cell(1, size(sp_outCols_pwe_orig,2)) ;
+                            for i=1:size(sp_outCols_pwe_orig,2)
+                                sp_outCols_pwe{1,i} = addOn + "_" + sp_outCols_pwe_orig{1,i} ;
+                            end
+                            subLvl_PWE{2,currROI} = [subLvl_PWE{2,currROI} sp_outCols_pwe] ;
                         end
                     end
                 end
@@ -1131,7 +1168,8 @@ for currFile = 1:size(FileNames,2)
                             if params.specparam.pwe
                                 saveName2pwe = strrep(saveNamePWE, 'ROI', ...
                                     params.rois{3, filteredROIindxs(currROI)}) ;
-                                writetable(array2table(sp_pwe_temp, 'RowNames', sp_outRows'), ...
+                                writetable(array2table(sp_pwe_temp, 'VariableNames', ...
+                                    cellstr(sp_outCols_pwe_orig), 'RowNames', sp_outRows'), ...
                                     helpName(saveName2pwe, '.csv'), 'WriteRowNames', true, ...
                                     'QuoteStrings', true) ;
                             end
@@ -1141,7 +1179,8 @@ for currFile = 1:size(FileNames,2)
                                 saveName, 'Sheet', params.rois{3, filteredROIindxs(currROI)}, ...
                                 'WriteRowNames', true) ;
                             if params.specparam.pwe
-                                writetable(array2table(sp_pwe_temp, 'RowNames', sp_outRows'), ...
+                                writetable(array2table(sp_pwe_temp, 'VariableNames', ...
+                                    cellstr(sp_outCols_pwe_orig), 'RowNames', sp_outRows'), ...
                                     saveNamePWE, 'Sheet', params.rois{3, filteredROIindxs(currROI)}, ...
                                     'WriteRowNames', true) ;
                             end
@@ -1191,7 +1230,10 @@ for currFile = 1:size(FileNames,2)
                         'RowNames', sp_outRows'), saveName, 'WriteRowNames', true, ...
                         'QuoteStrings', true) ;
                     if params.specparam.pwe
-                        writetable(array2table(sp_pwe), saveNamePWE,'QuoteStrings', true) ;
+                        writetable(array2table(sp_pwe,'VariableNames', ...
+                            cellstr(sp_outCols_pwe_orig), 'RowNames', sp_outRows'), ...
+                            saveNamePWE, 'WriteRowNames', true, ...
+                            'QuoteStrings', true) ;
                     end
                 end
             end
@@ -1248,7 +1290,16 @@ for currROI=1:size(params.rois,2)
             '.csv'), 'WriteRowNames', true, 'QuoteStrings', true) ;
 
     end
-end
+
+    if params.specparam.on && params.specparam.pwe && ismember(currROI, filteredROIindxs)
+        writetable(array2table(subLvl_PWE{1,currROI}, 'VariableNames', ...
+            cellstr(subLvl_PWE{2,currROI}), 'RowNames', FileNames(:,FNFooofMask)'), ...
+            helpName([srcDir filesep 'generatePower' filesep 'allSubs' ...
+            filesep 'allSubs_pwe_' params.rois{3,currROI} '.csv'], ...
+            '.csv'), 'WriteRowNames', true, 'QuoteStrings', true) ;
+
+    end    
+end % roi loop
 
 %% SUPPORT FUNCTIONS
 % DETERMINE IF CALCULATING FOR INDIVIDUAL, AVERAGE, OR BOTH TRIALS
@@ -1361,6 +1412,10 @@ function genPower_listParams(params)
             '\n - Minimum Peak Height: ' num2str(params.specparam.settings.min_peak_height) ...
             '\n - Peak Threshold: ' num2str(params.specparam.settings.peak_threshold) ...
             '\n - Aperiodic Mode: ' params.specparam.settings.aperiodic_mode '\n']) ;
+        fprintf(' - Split RoI into mutiple sheets: ')
+        if params.specparam.splitROI.on; fprintf('On\n'); else; fprintf('Off\n') ; end
+        fprintf(' - Save PWE as CSV: ')
+        if params.specparam.splitROI.csvFormat; fprintf('On\n'); else; fprintf('Off\n') ; end
     else; fprintf('Off\n') ;
     end
 end
