@@ -112,7 +112,7 @@ if size(FileNames,2) < 1; error('ERROR: No files detected') ; end
 %% READ IN BAD CHANNELS
 if ~params.badChans.inc
     % Load the File and convert table to cell
-    badChans = table2cell(readtable(params.badChans.file)) ;
+    badChans = table2cell(readtable(params.badChans.file,Delimiter={','})) ;
 
     % Split the string into a cell array
     for currtrial=1:size(badChans, 1)
